@@ -1,0 +1,277 @@
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{Risk Analysis for School Trip Funding}
+\maketitle
+\section*{Overview}
+This program uses Bayesian statistics to estimate the risk involved in different assumptions for the proportion of the cost of activities like school trips and musical instrument rentals that will be paid by parents or organizations like Parent Teacher Groups.
+\par\vspace{0.3 cm}
+The reason for doing a Bayesian analysis is that it provides a way to combine opinion and data in a mathematically disciplined way.
+\par\vspace{0.3 cm}
+In the situation of a recent policy change we are unlikely to have much experience with governing these types of programs under the new policies.
+\par\vspace{0.3 cm}
+In this setting it makes sense to augment the (very limited) data with additional information derived from relevant experience before the policy took effect and informed judgement.
+\par\vspace{0.3 cm}
+This suggests a Bayesian approach.  We start with a collection of opinions about the proportion of expenses that will be funded by outside entities, use it to construct a probability model for the proportion, then combine that model with data as it becomes available.
+
+\section{Application}
+In this analysis, we will start out by assuming we have estimates of the proportion that will be paid by entities other than the school district from three individuals:
+\begin{itemize}
+\item Anne:  50\%
+\item Jeff:  30\%
+\item Gene:  40\%
+\item Alexis: 50\%
+\end{itemize}
+\par\vspace{0.3 cm}
+The first step is to use these values as data points for estimating the parameters of a random variable having a \href{https://en.wikipedia.org/wiki/Beta_distribution}{beta distribution}.
+\par\vspace{0.3 cm}
+The beta distribution takes values between 0 and 1 and is widely used for modeling probabilities and proportions.
+\par\vspace{0.3 cm}
+We use R and a probabilistic modeling package called STAN to compute estimates of the parameters of the beta distribution in the form of 4,000 pairs of values.
+\par\vspace{0.3 cm}
+We then use those 4,000 pairs to simulate draws from a beta distribution for each pair of parameter values, each representing a single observed proportion.
+\par\vspace{0.3 cm}
+Finally, use the desctiptive statistics of that vector of 4,000 proportions to produce empirical quantiles of the distribution of the proportion.
+\par\vspace{0.3 cm}
+
+\subsection{Fit the Estimates to a Beta Distribution}
+
+<<>>=                                      #standard setup for Stan
+library(rstan)
+library(bayesplot)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+set.seed(1234)
+
+y      = c(0.3,0.5,0.5,0.4)      #our estimates based on opinions
+
+N      = length(y)
+
+a1 = 2
+b1 = 2
+a2 = 2
+b2 = 2
+
+stanfit = stan("beta_gamma.stan")         #call stan to fit the model
+
+print(stanfit)                           #print a summary of the results
+
+
+print(get_stanmodel(stanfit))
+@
+
+
+\par\vspace{0.3 cm}
+\subsection{Estimate the Parameters for the Prior Distribution}
+Now extract the 4,000 pairs of parameters, generate samples from a beta distribution having those parameters, and compute the quantiles of the resulting 4,000 proportion estimates.
+<<>>=
+
+pd=extract(stanfit)       #extract the posterior draw values
+
+str(pd)                                  #show the structure of the posterior draw
+
+pp = rbeta(4000,pd$alpha,pd$beta)        #simulate draw from beta dist
+
+hist(pp)                                 #show histogram
+
+mean(pp)                                    #show mean and quantiles
+quantile(pp,c(0.05,.1,.25,.5,.75,.90,.95))
+@
+\par\vspace{0.3 cm}
+
+Because the estimates are roughly centered at 0.5 and fairly evenly spaced, this produces a very flat distribution for the proportions.
+\par\vspace{0.3 cm}
+The interpretation would be that the given estimates do not suggest a particular bias towards zero or 100\%.  
+\par\vspace{0.3 cm}
+From the quantiles, we expect that 50\% of the time the proportion falls between 22\% and 69\%, based on the informed guesses about the true porportion and some fairly mild assumptions about the underlying probability distributions.
+\par\vspace{0.3 cm}
+\subsection{Estimate the Prior Distribution Parameters}
+Next we use the 4,000 simulated proprtions from the first step to estimate priors for the beta distribution.  
+\par\vspace{0.3 cm}
+We have a good idea what a beta prior derived from our three estimates looks like, but we need to characterize in terms of two parameters in order to combine it with data we will presumably observe at some point in the future.
+\par\vspace{0.3 cm}
+Since these must have distributions that are continuous and positive, the logical choice to model them is a \href{https://en.wikipedia.org/wiki/Gamma_distribution}{gamma distribution}. 
+\par\vspace{0.3 cm}
+We'll treat the sequences of 4,000 values for alpha and beta from the previous step as draws from a gamma distribution and estimate its parameters.
+\par\vspace{0.3 cm}
+We'll use separate gamma distributions for the two parameters.
+<<>>=
+y = pd$alpha
+N = length(y)
+
+gammafit = stan("gamma.stan")         #call stan to fit the model
+print(gammafit)
+print(get_stanmodel(gammafit))
+gamma1 = extract(gammafit)
+a1 = mean(gamma1$alpha)
+a1
+b1 = mean(gamma1$beta)
+b1
+@
+
+<<>>=
+y = pd$beta
+N = length(y)
+
+gammafit2 = stan("gamma.stan")         #call stan to fit the model
+print(gammafit2)
+print(get_stanmodel(gammafit2))
+gamma2 = extract(gammafit2)
+a2 = mean(gamma2$alpha)
+a2
+b2 = mean(gamma2$beta)
+b2
+@
+\subsection{The Prior Distribution for the Proportion}
+Now we use the estimated gamma parameters to generate values from the prior distribution for the proportion.
+<<>>=
+g1 = rgamma(length(gamma1$alpha),gamma1$alpha,gamma1$beta)
+g2 = rgamma(length(gamma2$alpha),gamma2$alpha,gamma2$beta)
+
+prp = rbeta(length(g1),g1,g2)
+hist(prp)
+mean(prp)
+quantile(prp,c(0.05,.1,.25,.5,.75,.90,.95))
+@
+We can interpret this as the distribution of the proportion based only on the estimates given by the participants (i.e., based only on the prior information), without seeing any data.
+\par\vspace{0.3 cm}
+The first quartile is .21 and the third quartile is .70.  This the the range we would say has a 50-50 chance of containing the actual parameter under this model.
+\par\vspace{0.3 cm}
+If our model is anywhere near correct, the quantiles should give us an indication of how optimistic or pessimistic specific values are. 
+\subsection{Incorporating Data}
+Now suppose we have a single data point that we want to incorporate into the analysis.
+\par\vspace{0.3 cm}
+The Bayesian paradigm starts with a prior distribution, and  uses observed data to revise it into an updated distribution called the \textit{posterior} distribution.
+\par\vspace{0.3 cm}
+The posterior is a compromise between the prior and the data.  As you get more data, the prior becomes less and less influential.  When you have very little data, the prior has a lot of say in result.
+\par\vspace{0.3 cm}
+A standard joke in Bayesian statistics is that when the prior suggests a horse and a donkey is observed, a Bayesian statistician concludes that it was a mule.
+\par\vspace{0.3 cm}
+We'll assume that our single observed data point had 40\% paid by contributions.
+<<>>=
+y = 0.4
+N = length(y)
+
+#call stan to fit the model
+beta_gamma = stan("beta_gamma_single_point.stan")
+print(beta_gamma)
+print(get_stanmodel(beta_gamma))
+bg = extract(beta_gamma)
+str(bg)
+p_beta = rbeta(length(bg$alpha),bg$alpha,bg$beta)
+
+hist(p_beta)
+mean(p_beta)
+quantile(p_beta,c(0.05,.1,.25,.5,.75,.90,.95))
+@
+Notice that the posterior is not very different from the prior, with a first quartile of .21 and a third quartile of .67.
+
+\subsection{Add a second data point}
+Now suppose we observe a second event, this time with a much higher percentage, 95\%.
+\par\vspace{0.3 cm}
+We just rerun the model with our original prior and two data points this time.
+
+<<>>=
+y = c(0.4,0.95)
+N = length(y)
+
+#call stan to fit the model
+beta_gamma = stan("beta_gamma.stan")       
+print(beta_gamma)
+print(get_stanmodel(beta_gamma))
+bg = extract(beta_gamma)
+str(bg)
+p_beta = rbeta(length(bg$alpha),bg$alpha,bg$beta)
+
+hist(p_beta)
+mean(p_beta)
+quantile(p_beta,c(0.05,.1,.25,.5,.75,.90,.95))
+@
+Because the new observation is much higher, it does move the quantiles, and now our interval containing the middle 50\% of the distribution runs from 33\% to 82\%.
+\subsection{Adding a Third Point}
+Now suppose we observe a third point, this time 75\%.  As before we rerun the model, this time with three data points.
+<<>>=
+y = c(0.4,0.95,0.75)
+N = length(y)
+#call stan to fit the model
+beta_gamma = stan("beta_gamma.stan")       
+print(beta_gamma)
+print(get_stanmodel(beta_gamma))
+bg = extract(beta_gamma)
+str(bg)
+p_beta = rbeta(length(bg$alpha),bg$alpha,bg$beta)
+
+hist(p_beta)
+mean(p_beta)
+quantile(p_beta,c(0.05,.1,.25,.5,.75,.90,.95))
+@
+This moves the 50\% interval a bit higher, to 37\% and 83\%.
+\par\vspace{0.3 cm}
+Finally, suppose we observe three more points with low values, 10\%, 15\%, and 25\%.
+<<>>=
+y = c(0.4,0.95,0.75,.10,.15,.25)
+N = length(y)
+
+#call stan to fit the model
+beta_gamma = stan("beta_gamma.stan")       
+print(beta_gamma)
+print(get_stanmodel(beta_gamma))
+bg = extract(beta_gamma)
+str(bg)
+p_beta = rbeta(length(bg$alpha),bg$alpha,bg$beta)
+
+hist(p_beta)
+mean(p_beta)
+quantile(p_beta,c(0.05,.1,.25,.5,.75,.90,.95))
+@
+\par\vspace{0.3 cm}
+As you would expect, this lowers the boundaries of the 50\% interval, this time to 23\% and 70\%.
+\par\vspace{0.3 cm}
+Note that these values don't differ much from the prior distribution.
+\subsection{Conclusion}
+Bayesian statistics allows us to make principaled estimates even when we have little or no data.  Among its advantages are:
+\begin{itemize}
+\item It allows us to combine data and intuition in a disciplined way
+\item It gives us a method that can be applied when little or no data  is available.
+\item It allows us to incorporate new data as it becomes available
+\end{itemize}
+\par\vspace{0.3 cm}
+Summary of 50\% intervals for the percentage paid:
+\par\vspace{0.3 cm}
+\begin{tabular}{lccc}
+Setting & First quartile& Median & Third quartile\\
+Four opinions, no data & 22\% & 44\% & 70\%\\
+Four opinions plus one observation &  22\% & 43\% & 67\%\\
+Four opions and two observations &  33\% & 60\% & 82\%\\
+Four opinions and three observations & 37\% & 62\% & 83\%\\
+Four opinions and six observations & 23\% & 45\% & 70\%
+\end{tabular}
+\par\vspace{0.3 cm}
+The observations, in order of entry, were:
+\par\vspace{0.3 cm}
+40\%, 95\%, 75\%, 10\%, 15\%, 25\%
+\par\vspace{0.3 cm}
+All but the first are made up.
+\subsection{Next Steps}
+Right now we have four opinions and one data point (maybe quite a few more depending on how we handle the grade school trips).
+\par\vspace{0.3 cm}
+From what Alexis told me, the grade school trips were all funded by the PTGs.  So we probably should stratify the data and model grade school separately from middle and high school.
+\par\vspace{0.3 cm}
+I suspect there is more data in the documents Anne sent me, I will try to organize it to support this effort.
+\par\vspace{0.3 cm}
+It would be good to solicit a few more opinions on what the proportion might end up being.  
+\par\vspace{0.3 cm}
+What I hope to avoid is the assumption of 0\% that seems to be built into the budget at this time.  There is an opportunity cost to assuming the worst case, namely that we have money set aside for something that is extremely unlikely to happen.  I think it is better to use a conservative estimate based on informed opinion and what data we have.
+\par\vspace{0.3 cm}
+\subsection{Overview of Bayesian statistics}
+Many if not most classically trained statisticians are taught to avoid Bayesian models because there is an element of subjectivity.  In the last 25 years, opinions have shifted on this and Bayesian techniques are considered to be as valid as classical (frequentist) statistics.
+\par\vspace{0.3 cm}
+Unfortunatelty, College and University curriculms have not kept pace, so formal courses in Bayesian statistics, especially at the undergraduate level, are quite rare.  So hardly anyone you run into will have even heard of Bayesian statistics, or have any idea what it can do.
+\par\vspace{0.3 cm}
+A sign that this is changing is the fact that in 2018 both of the major credentialling organizations for actuaries, the Society of Actuaries and the Casualty Actuarial Society both made substantial revisions to their exam structure and syllabi.  To obtain the Associate of the Casualty Actuarial Society (ACAS) credential, candidates must \href{https://www.casact.org/admissions/process/}{pass a series of exams and complete specified coursework}.  \href{https://www.casact.org/admissions/syllabus/index.cfm?fa=MASII&parentID=392}{A new exam called "Modern Actuarial Statistics II"} was added to the requirements in 2018.  The \href{https://www.casact.org/admissions/syllabus/ExamMASII.pdf}{exam syllabus for April and October 2020 administrations} states that 40-60 percent of the exam is on Bayesian statistics.
+\par\vspace{0.3 cm}
+For the \href{https://pathways.soa.org/asa}{Associate credential of the Society of Actuaries}, candidates are required to pass a \href{https://pathways.soa.org/asa}{5-1/2 hour Predictive Analytics exam}.  During this exam, they are provided with a computer that has Excel, R, and RStudio installed (this analysis is being run with R/RStudio, which are both free).
+\par\vspace{0.3 cm}
+I have taught courses that use the textbooks cited as references for both the \href{https://xcelab.net/rm/statistical-rethinking/}{Modern Actuarial Statistics exam (McElreath)} and the \href{https://faculty.marshall.usc.edu/gareth-james/ISL/}{Predictive Analytics exam (James et al, a free download)}.
+
+\end{document}
