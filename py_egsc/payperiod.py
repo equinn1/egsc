@@ -16,11 +16,7 @@ class Payperiod():                                      #class for dates at end 
             
         else:                                           #called with just a date
             self.set_fiscal_year_and_payday(arg1)       #set fiscal year and payday       
-            
-            
-        self.set_school_year()                          #set school year
-        self.school_year_seq = None
-        self.set_school_year_seq()                      #set school year sequence number
+        
         self.calendar_year = self.payday.year           #set calendar year
 
         return
@@ -35,31 +31,26 @@ class Payperiod():                                      #class for dates at end 
             pmonth = pdate.month                        #payday month
             if ((lmonth == 6) & (pmonth == 7)):         #only if prev check in June, current in July
                 seq = 1                                 #fiscal year payperiod number is one
-                syseq = 24                              #school year payperiod is 24
                 fyear = pdate.year + 1                  #fiscal year is pdate year plus 1
             else:                                       #otherwise:
                 seq += 1                                #increment fiscal year payperiod seq
-                syseq += 1                              #increment school year payperiod seq
-            if (syseq==27):                             #if school year payperiod = 27
-                syseq = 1                               #then it's the first payperiod of new syear
-            if (seq > 3):                               #if fy payperiod sequence > 3
-                syear = str(pdate.year) + '-' + str(pdate.year+1)    #sy is pdate.year to pdate.year+1
-            else:                                                    #otherwise
-                syear = str(pdate.year-1) + '-' + str(pdate.year)    #sy is pdate.year-1 to pdate.year
-            pdate += delta                              #until we find payday >= given date
-            lmonth = pmonth                             #finally set last month to payday month
-            self.payday = pdate                         #payday is first pay date >= cdate
             self.fyear = fyear                          #set fiscal year
             self.seq = seq                              #set payday number
-            self.school_year = syear                    #set school year
-            self.school_year_seq = syseq                #set school year sequence
+            lmonth = pmonth                             #finally set last month to payday month
+            pdate += delta                              #until we find payday >= given date
+            self.payday = pdate                         #payday is first pay date >= cdate
         self.seq += 1
         if (self.seq > 26):
             self.seq = 1
-            self.payday = pdate + delta
-            self.fyear = pdate.year + 1
-            self.school_year = str(pdate.year-1) + '-' + str(pdate.year)
-            self.school_year_seq = 24
+        if (self.seq < 4):
+            self.school_year_seq = self.seq + 23
+        else:
+            self.school_year_seq = self.seq - 3
+        if ((self.payday.month < 8) | ((self.payday.month==8) & (self.school_year_seq > 23))):
+            self.school_year = str(self.payday.year-1) + '-' + str(self.payday.year)
+        else:
+            self.school_year = str(self.payday.year) + '-' + str(self.payday.year+1)
+        
          
         return
     
