@@ -34,7 +34,6 @@ class Payperiod():                                      #class for dates at end 
                 fyear = pdate.year + 1                  #fiscal year is pdate year plus 1
             else:                                       #otherwise:
                 seq += 1                                #increment fiscal year payperiod seq
-            self.fyear = fyear                          #set fiscal year
             self.seq = seq                              #set payday number
             lmonth = pmonth                             #finally set last month to payday month
             pdate += delta                              #until we find payday >= given date
@@ -50,6 +49,10 @@ class Payperiod():                                      #class for dates at end 
             self.school_year = str(self.payday.year-1) + '-' + str(self.payday.year)
         else:
             self.school_year = str(self.payday.year) + '-' + str(self.payday.year+1)
+        if (self.payday.month < 7):
+            self.fyear = self.payday.year
+        else:
+            self.fyear = self.payday.year + 1
         
          
         return
