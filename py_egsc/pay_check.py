@@ -37,7 +37,7 @@ class Pay_check():                                                            #g
         return
     
 class Check_lineitem():                                                       #check lineitem class
-    def __init__(self,fund,acct,obj,position,rate,earnings,acct_desc,obj_desc,acct_UCOA,stepinfo):
+    def __init__(self,fund,acct,obj,position,rate,earnings,acct_desc,obj_desc):
         self.fund = fund
         self.acct = acct
         self.obj  = obj
@@ -46,8 +46,8 @@ class Check_lineitem():                                                       #c
         self.earnings = earnings
         self.acct_desc = acct_desc
         self.obj_desc = obj_desc
-        self.acct_UCOA = acct_UCOA
-        self.stepinfo = stepinfo
+        self.acct_UCOA = None
+        self.stepinfo = None
         
     def get_fund(self):
         return(self.fund)
@@ -78,3 +78,11 @@ class Check_lineitem():                                                       #c
     
     def get_stepinfo(self):
         return(self.stepinfo)
+    
+    def set_stepinfo(self,sinfo):
+        self.stepinfo = sinfo
+        return
+    
+    def set_acct_UCOA(self,ucoa):
+        self.acct_UCOA = ucoa
+        return

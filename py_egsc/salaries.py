@@ -7,6 +7,8 @@ class Teacher_salary():
 
         self.cba_cols ={'B': 0,'B+30': 1,'M': 2,'M+30': 3,'M2/CAGS': 4, 'D': 5}
         
+        self.cols_cba ={0:'B',1:'B+30',2:'M',3:'M+30',4:'M2/CAGS',5:'D'}
+        
         self.cba = {}
         
                                 #start with FY2016 (2015-2016) salary matrix
@@ -23,13 +25,13 @@ class Teacher_salary():
             [78898, 80675, 81743, 82438, 82866, 83190]]) 
         
                                 #FY2017 (2016-2017) is the same as FY2016
-        self.cba['2016-2017'] = self.cba['2015-2016']
+        self.cba['2016-2017'] = self.cba['2015-2016'].copy()
         
                                 #FY2018 (2017-2018) 2% increase
-        self.cba['2017-2018'] = np.around(1.02*self.cba['2016-2017'],0)
+        self.cba['2017-2018'] = np.around(1.02*self.cba['2016-2017'].copy(),0)
         
                                 #FY2019 (2018-2019) 2.25% increase
-        self.cba['2018-2019'] = np.around(1.0225*self.cba['2017-2018'],0)
+        self.cba['2018-2019'] = np.around(1.0225*self.cba['2017-2018'].copy(),0)
         
                                 #FY2020 (2019-2020) same as FY2019
         self.cba['2019-2020'] = np.array([
@@ -71,22 +73,22 @@ class Teacher_salary():
             [85821.23, 87753.81, 88915.66, 89671.80, 90136.95, 90489.47]]) 
         
                                 #FY2023 (2022-2023) same as FY2022
-        self.cba['2022-2023'] = self.cba['2021-2022']
+        self.cba['2022-2023'] = self.cba['2021-2022'].copy()
         
                                 #FY2024 (2023-2024) 2% increase, don't round to dollar
-        self.cba['2023-2024'] = np.around(1.02*self.cba['2022-2023'],2)
+        self.cba['2023-2024'] = np.around(1.02*self.cba['2022-2023'].copy(),2)
         
                                 #FY2025 (2024-2025) 2.25% increase, don't round to dollar
-        self.cba['2024-2025'] = np.around(1.0225*self.cba['2023-2024'],2)
+        self.cba['2024-2025'] = np.around(1.0225*self.cba['2023-2024'].copy(),2)
         
                                 #FY2015: back out 2.5% increase from FY2016, round to dollar
-        self.cba['2014-2015'] = np.around(self.cba['2015-2016']/1.025,0) 
+        self.cba['2014-2015'] = np.around(self.cba['2015-2016'].copy()/1.025,0) 
         
                                 #FY2014: back out 2% increase from FY2015, round to dollar
-        self.cba['2013-2014'] = np.around(self.cba['2014-2015']/1.02,0)  
+        self.cba['2013-2014'] = np.around(self.cba['2014-2015'].copy()/1.02,0)  
         
                                 #FY2013: back out 1.01% from FY2014 for steps 1-9, round to dollar
-        self.cba['2012-2013'] = self.cba['2013-2014']
+        self.cba['2012-2013'] = self.cba['2013-2014'].copy()
         self.cba['2012-2013'][0:8,:] = np.around(self.cba['2012-2013'][0:8,:]/1.01,0)
                                 #FY2013: back out 2.25% from FY2014 for step 10, round to dollar
         self.cba['2012-2013'][9,:]   = np.around(self.cba['2012-2013'][9,:]/1.0225,0)  
@@ -97,3 +99,25 @@ class Teacher_salary():
     
     def get_school_year_cba_matrix(self,school_year):
         return(self.cba[school_year])
+    
+    def get_salary(self,school_year,col,step):      #look up salary by year, column, step
+        """Returns CBA salary given school year, column."""
+      
+        s  = int(step)-1                                 #step index is one less than the step number
+        try: 
+            c = self.cba_cols[col]                  #column within the CBA salary matrix
+        except KeyError:
+            print("Columns are B, B+30, M, M+30, M2/CAGS, D")
+            return                                    
+        
+        try:
+            sm = self.cba[school_year]
+            return sm[s,c]            #look up the value if it exists
+        except KeyError:                                        #otherwise raise error condition
+            print("KeyError in get_salary: ",school_year,col,step)
+        except IndexError:
+            print("IndexError in get_salary: ",school_year,col,step)
+        return
+    
+    def get_colname(self,col_index):              #look up column name from column index
+        return(self.cols_cba(col_index)) 
