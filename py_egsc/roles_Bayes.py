@@ -56,21 +56,15 @@ class Role():                                                  #generic employee
             self.payperiods[syear] = {}
         if syseq not in self.payperiods[syear].keys():        #add payperiod to school year dictionary with seqence as key
             self.payperiods[syear][syseq] = pperiod
-        if self.first_payperiod is None:                      #if no earliest payperiod, use this one as initial value
-            self.first_payperiod = pperiod                    #save earliest payperiod object
-            self.first_school_year = syear                    #save earliest school year
-            self.first_school_year_seq = syseq                #save sequence number in earliest school year
-        else:                                                 #earliest payperiod is coded, make sure this one is not earlier
-            if ((syear  <  self.first_school_year) |\
-                ((syear == self.first_school_year) &\
-                 (syseq <  self.first_school_year_seq))):     #if earlier school year, or same school year and earlier seq
-                self.first_payperiod = pperiod                # then replace previous earliest payperiod with this one
-                self.first_school_year = syear
-                self.first_school_year_seq = syseq
                 
         previous_payperiod = None                             #build (or rebuild) chronological chain of payperiods
+        self.first_payperiod = None
         for sy in sorted(self.payperiods.keys()):             #process in school year order          
             for sy_seq in sorted(self.payperiods[sy].keys()): #and school year sequence order within a school year
+                if (self.first_payperiod is None):
+                    self.first_payperiod = self.payperiods[sy][sy_seq]
+                    self.first_school_year = self.first_payperiod.get_school_year()
+                    self.first_school_year_seq = self.first_payperiod.get_school_year_seq()
                 self.payperiods[sy][sy_seq].set_prev_payperiod(previous_payperiod)    #bacwards link to previous
                 self.payperiods[sy][sy_seq].set_next_payperiod(None)                  #forward link is None for now
                 if (previous_payperiod is not None):                                  #update forward link in previous
@@ -191,28 +185,15 @@ class Teacher(Role):
         with open('../../finance_subcommittee/rate_lookup_.pkl', 'rb') as handle:
             self.rate_lookup =  pickle.load(handle)
             
-#        with open('../../rate_lookup_1_12.pkl', 'rb') as handle:
-#            self.rate_lookup =  pickle.load(handle)
-            
         with open('../../finance_subcommittee/empirical_priors_1_14_2021.pkl', 'rb') as handle:
             empirical_probabilities = pickle.load(handle)
+            
         for key in empirical_probabilities['TEACHER'].keys():
             if (key != 'fte'):
                 self.empirical_priors[key] = empirical_probabilities['TEACHER'][key]
         self.fte_empirical_priors = empirical_probabilities['TEACHER']['fte']
         return
-    
-    def add_payperiod_by_index(self,syear,syseq,pperiod):
-        super().add_payperiod_by_index(syear,syseq,pperiod)
-        prevpp = pperiod.get_prev_payperiod()
-        if (prevpp is not None):
-            pperiod.priors = cp.deepcopy(prevpp.get_priors())
-            pperiod.fte_priors = cp.deepcopy(prevpp.get_fte_priors())
-        else:
-            pperiod.priors = cp.deepcopy(self.get_empirical_priors())
-            pperiod.fte_priors = {}
             
-        
     def set_cba_matrix(self,cba_matrix):
         self.cba_matrix = cp.deepcopy(cba_matrix)
         return
@@ -373,7 +354,7 @@ class Para(Role):
         Role.__init__(self, person, role_name) 
         
         self.empirical_priors = {}                             #empirical priors
-        self.fte_empirical_priors = {}        
+
         self.cba = {
             '2019-2020':{
                 'Para':    {7:19.91, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
@@ -407,41 +388,118 @@ class Para(Role):
             },
             '2013-2014':{
                 'Para':    {7:18.04, 6:17.02, 5:16.18, 4:15.73, 3:15.26, 2:14.93, 1:14.46},
-                'Office':  {7:21.94, 6:20.15, 5:19.19, 4:18.25, 3:17.27, 2:16.59, 1:16.11},
+                'Office':  {7:21.51, 6:20.15, 5:19.19, 4:18.25, 3:17.27, 2:16.59, 1:16.11},
                 'Central': {7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64}
             }
                 
         }
-        return
         
-    def set_default_priors(self, priors=None):
-        """Generic prior initialization for supplied payperiod object - returns empty dictionary"""
-        if (priors is None):
-            self.default_priors['job'] = self.set_uniform_priors(3)
-            self.default_priors['step'] = self.set_uniform_priors(7)
-        else:
-            self.default_priors = cp.deepcopy(priors)
+        with open('../../finance_subcommittee/para_rate_lookup_1_16_2021.pkl', 'rb') as handle:
+            self.para_rate_lookup =  pickle.load(handle)
+            
+        with open('../../finance_subcommittee/para_priors_1_16_2021.pkl', 'rb') as handle:
+            self.para_priors =  pickle.load(handle)
+            
+        self.set_empirical_priors(self.para_priors)
+            
         return
     
     def set_empirical_priors(self,prior):
-        self.empirical_priors = cp.deepcopy(prior['PARA'])
-        return
-        
-    def decode_earnings(self,lineitem):
-        """ decode_earnings(lineitem,salary_matrix)  code step, FTE, and payments for Paras"""
+        try:
+            self.empirical_priors = cp.deepcopy(prior)
+        except KeyError:
+            print('Para - set empirical priors KeyError ',prior)
         return
     
-        def set_initial_priors(self,ppo):
-            """Prior initialization as default for PARA roles"""
-            ppo.set_priors(self.default_priors)
+    def get_rate_lookup(self):
+        return(self.para_rate_lookup)
+        
+    def update_priors(self,job,n,ppo):
+        """update_priors(param,value) updates the priors for param given value"""
+        try:
+            for i in ppo.priors[job].keys():
+                ppo.priors[job][i] = 0.5*ppo.priors[job][i]
+        except KeyError:
+            print('Para - update_priors KeyError ',job,n,ppo.priors)
             return
+        try:
+            ppo.priors[job][n] += 0.5
+        except KeyError:
+            print('Para - update_priors KeyError ',param,n,ppo.priors)
+        return
+        
+    #get step, hours for paras, office, and central office
+    
+    def decode_earnings(self,lineitem):
+       
+        fund             = lineitem.get_fund()
+        obj              = lineitem.get_obj()
+        rate             = lineitem.get_rate()
+        acct             = lineitem.get_acct()
+        in_earnings      = lineitem.get_earnings()
+        earnings         = abs(in_earnings)                 #reverse sign if earnings are negative
+        
+        chk              = lineitem.get_parent_check()      #parent check object
+        ppo              = chk.get_parent_payperiod()       #parent payperiod object
+        school_year      = ppo.get_school_year()            #school year for current lineitem
+        syseq            = ppo.get_school_year_seq()        #school year sequence number
+        parent_role      = ppo.get_parent_role()            #get parent role
+        rate_lookup      = self.get_rate_lookup()
+        person           = self.get_parent_person()  #parent person object
+        name             = person.get_name()                #name of person
+        payment_type     = 'Other or unknown'
+        
+        error_tolerance  = 3
+                
+        if (rate == 0.0):                          #zero rate
+
+            payment_type = "Other or unknown"
+            return
+          
+        elif str(rate) in rate_lookup[school_year].keys():
+            
+            step = rate_lookup[school_year][str(rate)]['step'] - 1
+            job = rate_lookup[school_year][str(rate)]['job']
+            mindiff = rate_lookup[school_year][str(rate)]['mindiff']
+            hours = None
+            if (rate > 0.0):
+                hours = earnings/rate
+            
+            self.update_priors(job,step,ppo)
+            lineitem.update_stepinfo('step',school_year + '-' + str(step+1))        #code is:  yyyy-yyyy-step
+            lineitem.update_stepinfo('hours',hours)    
+            lineitem.update_stepinfo('mindiff',mindiff)
+            lineitem.update_stepinfo('table_rate',rate)
+            lineitem.update_stepinfo('table_job',job)
+                                                   
+        return
         
 class Office(Para):
     
     def __init__(self, person, role_name):
-        Role.__init__(self, person, role_name)
-        
-        self.default_priors = {}
+        Para.__init__(self, person, role_name)
+        self.set_empirical_priors(self.para_priors)
+        return
+    
+    def set_empirical_priors(self,prior):
+        try:
+            self.empirical_priors = cp.deepcopy(prior)
+        except KeyError:
+            print('Office - set empirical priors KeyError ',prior)
+        return
+    
+    def xupdate_priors(self,job,n,ppo):
+        """update_priors(param,value) updates the priors for param given value"""
+        try:
+            for i in ppo.priors[job].keys():
+                ppo.priors[job][i] = 0.5*ppo.priors[job][i]
+        except KeyError:
+            print('Office - update_priors KeyError ',job,n,ppo.priors)
+            return
+        try:
+            ppo.priors[job][n] += 0.5
+        except KeyError:
+            print('Office update_priors KeyError ',job,n,ppo.priors)
         return
             
 class Facilities(Role):
@@ -496,6 +554,9 @@ class Facilities(Role):
                 'Custodian II': {'salary': 40151.02, 'rate': 18.2900}
             }
         }
+        for syear in self.cba.keys():
+            for job in self.cba[syear].keys():
+                self.cba[syear][job]['ot_rate'] = 1.5*self.cba[syear][job]['rate']
         
         return
     
@@ -503,6 +564,10 @@ class Facilities(Role):
         
     def get_cba_matrix(self):
         return(self.cba)
+    
+    def get_rate_lookup(self):
+        """Null get_rate_lookup function for facilities"""
+        return
     
     def get_cba_matrix_by_year(self, school_year):
         return(self.cba[school_year])     
@@ -517,20 +582,88 @@ class Facilities(Role):
         self.empirical_priors = prior['FACILITIES']
         return
         
-    def decode_earnings(self,lineitem): 
-        """ decode_earnings(lineitem,salary_matrix)  code step, FTE, and payments for facilities"""
+    def decode_earnings(self,lineitem):
+       
+        fund             = lineitem.get_fund()
+        obj              = lineitem.get_obj()
+        rate             = lineitem.get_rate()
+        acct             = lineitem.get_acct()
+        in_earnings      = lineitem.get_earnings()
+        earnings         = abs(in_earnings)                 #reverse sign if earnings are negative
+        
+        chk              = lineitem.get_parent_check()      #parent check object
+        ppo              = chk.get_parent_payperiod()       #parent payperiod object
+        school_year      = ppo.get_school_year()            #school year for current lineitem
+        syseq            = ppo.get_school_year_seq()        #school year sequence number
+        parent_role      = ppo.get_parent_role()            #get parent role
+        rate_lookup      = self.get_rate_lookup()
+        person           = self.get_parent_person()  #parent person object
+        name             = person.get_name()                #name of person
+        payment_type     = 'Other or unknown'
+        
+        error_tolerance  = 3
+                
+        if (rate == 0.0):                          #zero rate
 
+            payment_type = "Other or unknown"
+            return
+          
+        elif ((rate > 15.0) & (rate < 30.0)):
+            
+            mindiff = 1000.0
+            min_sy = None
+            min_job = None
+            min_OT  = None
+            
+            for sy in self.cba.keys():
+                for job in self.cba[sy].keys():
+                    diff = abs(rate - self.cba[sy][job]['rate'])
+                    if (diff < mindiff):
+                        mindiff = diff
+                        min_sy = sy
+                        min_job = job
+                        min_OT = False
+                    diff = abs(rate - self.cba[sy][job]['ot_rate'])
+                    if (diff < mindiff):
+                        mindiff = diff
+                        min_sy = sy
+                        min_job = job
+                        min_OT = True
+            
+            cba_rate = self.cba[min_sy][min_job]['rate']
+            if (rate > 0.0):
+                hours = round(earnings/rate,4)
+
+            lineitem.update_stepinfo('cba_rate',cba_rate) 
+            lineitem.update_stepinfo('hours',hours)    
+            lineitem.update_stepinfo('mindiff',round(mindiff,4))
+            lineitem.update_stepinfo('syear',min_sy)
+            lineitem.update_stepinfo('job',min_job)
+            lineitem.update_stepinfo('OT',min_OT)
+            lineitem.update_stepinfo('hours',hours)
+                                                   
         return
     
     
-        def set_initial_priors(self,ppo,probs=None):
-            """Prior initialization for FACILITIES roles as discrete uniform with equal probabilities"""
-            if (probs is None):
-                ppo.set_priors(self.default_priors)
-            else:
-                ppo.set_priors(self.default_priors)
-            return
+    def set_initial_priors(self,ppo,probs=None):
+        """Null Prior initialization for facilities"""
+        return
     
+class Custodian(Facilities):
+    
+    def __init__(self, person, role_name):
+        Facilities.__init__(self, person, role_name)
+        
+class Maintenance(Facilities):
+    
+    def __init__(self, person, role_name):
+        Facilities.__init__(self, person, role_name)
+
+class Electrician(Facilities):
+    
+    def __init__(self, person, role_name):
+        Facilities.__init__(self, person, role_name)
+        
 class Substitutes(Role):
     
     def __init__(self, person, role_name):
@@ -560,840 +693,3 @@ class Coach(Role):
     
     def __init__(self, person, role_name):
         Role.__init__(self, person, role_name) 
-        
-{'2013-2014': {
-    419.3696: {'row': 9,'col': 1,'salary': 77164.0,'mindiff': 0.0063999999983934686},
-    265.5163: {'row': 2,'col': 2,'salary': 48855.0,'mindiff': 0.000800000001618173},
-    410.1359: {'row': 9,'col': 0,
-   'salary': 75465.0,
-   'mindiff': 0.005600000004051253},
-  359.712: {'row': 7,
-   'col': 2,
-   'salary': 66187.0,
-   'mindiff': 0.008000000001629815},
-  424.9185: {'row': 9,
-   'col': 2,
-   'salary': 78185.0,
-   'mindiff': 0.004000000000814907},
-  430.7609: {'row': 9,
-   'col': 4,
-   'salary': 79260.0,
-   'mindiff': 0.005600000004051253},
-  303.2011: {'row': 4,
-   'col': 2,
-   'salary': 55789.0,
-   'mindiff': 0.0023999999975785613},
-  327.4457: {'row': 6,
-   'col': 0,
-   'salary': 60250.0,
-   'mindiff': 0.00879999999597203},
-  386.3533: {'row': 8,
-   'col': 2,
-   'salary': 71088.0,
-   'mindiff': 1.0071999999927357},
-  428.5326: {'row': 9,
-   'col': 3,
-   'salary': 78850.0,
-   'mindiff': 0.001600000003236346},
-  322.038: {'row': 5,
-   'col': 2,
-   'salary': 59255.0,
-   'mindiff': 0.008000000001629815},
-  346.288: {'row': 7,
-   'col': 0,
-   'salary': 63717.0,
-   'mindiff': 0.008000000001629815},
-  214.6141: {'row': 0,
-   'col': 0,
-   'salary': 39489.0,
-   'mindiff': 0.005599999996775296},
-  246.6739: {'row': 1,
-   'col': 2,
-   'salary': 45389.0,
-   'mindiff': 1.0023999999975786},
-  289.7663: {'row': 4,
-   'col': 0,
-   'salary': 53317.0,
-   'mindiff': 0.000800000001618173},
-  432.4457: {'row': 9,
-   'col': 5,
-   'salary': 79570.0,
-   'mindiff': 0.00879999999597203},
-  303.2012: {'row': 4,
-   'col': 2,
-   'salary': 55789.0,
-   'mindiff': 0.02079999999841675},
-  214.6143: {'row': 0,
-   'col': 0,
-   'salary': 39489.0,
-   'mindiff': 0.031199999997625127},
-  308.5978: {'row': 5,
-   'col': 0,
-   'salary': 56782.0,
-   'mindiff': 0.004799999995157123},
-  316.9837: {'row': 5,
-   'col': 1,
-   'salary': 58325.0,
-   'mindiff': 0.000800000001618173},
-  252.0815: {'row': 2,
-   'col': 0,
-   'salary': 46383.0,
-   'mindiff': 0.004000000000814907},
-  381.3098: {'row': 8,
-   'col': 1,
-   'salary': 70161.0,
-   'mindiff': 0.003200000006472692},
-  260.4674: {'row': 2,
-   'col': 1,
-   'salary': 47925.0,
-   'mindiff': 1.0016000000032363},
-  270.9239: {'row': 3,
-   'col': 0,
-   'salary': 49850.0,
-   'mindiff': 0.0023999999975785613},
-  279.2989: {'row': 3,
-   'col': 1,
-   'salary': 51391.0,
-   'mindiff': 0.0023999999975785613},
-  284.3424: {'row': 3,
-   'col': 2,
-   'salary': 52320.0,
-   'mindiff': 0.9983999999967637},
-  372.9239: {'row': 8,
-   'col': 0,
-   'salary': 68619.0,
-   'mindiff': 1.0023999999975786},
-  340.8696: {'row': 6,
-   'col': 2,
-   'salary': 62721.0,
-   'mindiff': 0.9936000000016065},
-  308.5: {'row': 4, 'col': 4, 'salary': 56765.0, 'mindiff': 1.0},
-  428.53: {'row': 9,
-   'col': 3,
-   'salary': 78850.0,
-   'mindiff': 0.4800000000104774},
-  228.0489: {'row': 0,
-   'col': 2,
-   'salary': 41962.0,
-   'mindiff': 1.0023999999975786}},
- '2014-2015': {427.7554: {'row': 9,
-   'col': 1,
-   'salary': 78707.0,
-   'mindiff': 0.0063999999983934686},
-  290.0272: {'row': 3,
-   'col': 2,
-   'salary': 53366.0,
-   'mindiff': 0.9952000000048429},
-  418.337: {'row': 9,
-   'col': 0,
-   'salary': 76974.0,
-   'mindiff': 0.008000000001629815},
-  433.4185: {'row': 9,
-   'col': 2,
-   'salary': 79749.0,
-   'mindiff': 0.004000000000814907},
-  394.0815: {'row': 8,
-   'col': 2,
-   'salary': 72510.0,
-   'mindiff': 0.9959999999991851},
-  270.8261: {'row': 2,
-   'col': 2,
-   'salary': 49832.0,
-   'mindiff': 0.0023999999975785613},
-  439.375: {'row': 9, 'col': 4, 'salary': 80845.0, 'mindiff': 0.0},
-  437.1033: {'row': 9,
-   'col': 3,
-   'salary': 80427.0,
-   'mindiff': 0.007199999992735684},
-  328.4783: {'row': 5,
-   'col': 2,
-   'salary': 60440.0,
-   'mindiff': 0.0072000000000116415},
-  257.125: {'row': 2, 'col': 0, 'salary': 47311.0, 'mindiff': 0.0},
-  353.212: {'row': 7,
-   'col': 0,
-   'salary': 64991.0,
-   'mindiff': 0.008000000001629815},
-  347.6848: {'row': 6,
-   'col': 2,
-   'salary': 63975.0,
-   'mindiff': 0.9968000000008033},
-  380.3859: {'row': 8,
-   'col': 0,
-   'salary': 69991.0,
-   'mindiff': 0.005600000004051253},
-  237.913: {'row': 1,
-   'col': 0,
-   'salary': 43777.0,
-   'mindiff': 1.0080000000016298},
-  314.7717: {'row': 5,
-   'col': 0,
-   'salary': 57918.0,
-   'mindiff': 0.0072000000000116415},
-  441.0924: {'row': 9,
-   'col': 5,
-   'salary': 81161.0,
-   'mindiff': 0.001600000003236346},
-  333.9946: {'row': 6,
-   'col': 0,
-   'salary': 61455.0,
-   'mindiff': 0.0063999999983934686},
-  309.2663: {'row': 4,
-   'col': 2,
-   'salary': 56905.0,
-   'mindiff': 0.000800000001618173},
-  366.9076: {'row': 7,
-   'col': 2,
-   'salary': 67511.0,
-   'mindiff': 0.001600000003236346},
-  342.5543: {'row': 6,
-   'col': 1,
-   'salary': 63029.0,
-   'mindiff': 0.991200000004028},
-  276.3424: {'row': 3,
-   'col': 0,
-   'salary': 50847.0,
-   'mindiff': 0.001600000003236346},
-  323.3261: {'row': 5,
-   'col': 1,
-   'salary': 59492.0,
-   'mindiff': 0.0023999999975785613},
-  284.8859: {'row': 3,
-   'col': 1,
-   'salary': 52419.0,
-   'mindiff': 0.005599999996775296},
-  295.5598: {'row': 4,
-   'col': 0,
-   'salary': 54383.0,
-   'mindiff': 0.0031999999991967343},
-  304.1033: {'row': 4,
-   'col': 1,
-   'salary': 55955.0,
-   'mindiff': 0.0072000000000116415},
-  399.4946: {'row': 8,
-   'col': 4,
-   'salary': 73507.0,
-   'mindiff': 0.0063999999983934686},
-  366.91: {'row': 7,
-   'col': 2,
-   'salary': 67511.0,
-   'mindiff': 0.4400000000023283},
-  333.9022: {'row': 5,
-   'col': 4,
-   'salary': 61438.0,
-   'mindiff': 0.004799999995157123},
-  433.42: {'row': 9,
-   'col': 2,
-   'salary': 79749.0,
-   'mindiff': 0.27999999999883585},
-  251.6088: {'row': 1,
-   'col': 2,
-   'salary': 46297.0,
-   'mindiff': 0.9807999999975436},
-  258.5978: {'row': 1,
-   'col': 5,
-   'salary': 47581.0,
-   'mindiff': 0.9952000000048429},
-  251.6087: {'row': 1,
-   'col': 2,
-   'salary': 46297.0,
-   'mindiff': 0.9991999999983818},
-  433.4183: {'row': 9,
-   'col': 2,
-   'salary': 79749.0,
-   'mindiff': 0.03280000000086147}},
- '2015-2016': {438.4511: {'row': 9,
-   'col': 1,
-   'salary': 80675,
-   'mindiff': 0.0023999999975785613},
-  317.0: {'row': 4, 'col': 2, 'salary': 58328, 'mindiff': 0.0},
-  428.7935: {'row': 9,
-   'col': 0,
-   'salary': 78898,
-   'mindiff': 0.004000000000814907},
-  444.2554: {'row': 9,
-   'col': 2,
-   'salary': 81743,
-   'mindiff': 0.0063999999983934686},
-  297.2826: {'row': 3,
-   'col': 2,
-   'salary': 54700,
-   'mindiff': 0.001600000003236346},
-  450.3587: {'row': 9,
-   'col': 4,
-   'salary': 82866,
-   'mindiff': 0.0007999999943422154},
-  448.0326: {'row': 9,
-   'col': 3,
-   'salary': 82438,
-   'mindiff': 0.001600000003236346},
-  356.3804: {'row': 6,
-   'col': 2,
-   'salary': 65574,
-   'mindiff': 0.0063999999983934686},
-  283.25: {'row': 3, 'col': 0, 'salary': 52118, 'mindiff': 0.0},
-  389.8967: {'row': 8,
-   'col': 0,
-   'salary': 71741,
-   'mindiff': 0.007199999992735684},
-  376.0815: {'row': 7,
-   'col': 2,
-   'salary': 69199,
-   'mindiff': 0.004000000000814907},
-  257.9022: {'row': 1,
-   'col': 2,
-   'salary': 47454,
-   'mindiff': 0.004799999995157123},
-  263.5543: {'row': 2,
-   'col': 0,
-   'salary': 48494,
-   'mindiff': 0.00879999999597203},
-  342.3424: {'row': 6,
-   'col': 0,
-   'salary': 62991,
-   'mindiff': 0.001600000003236346},
-  444.2555: {'row': 9,
-   'col': 2,
-   'salary': 81743,
-   'mindiff': 0.012000000002444722},
-  452.1196: {'row': 9,
-   'col': 5,
-   'salary': 83190,
-   'mindiff': 0.0063999999983934686},
-  362.0435: {'row': 7,
-   'col': 0,
-   'salary': 66616,
-   'mindiff': 0.004000000000814907},
-  336.6902: {'row': 5,
-   'col': 2,
-   'salary': 61951,
-   'mindiff': 0.0031999999991967343},
-  403.9293: {'row': 8,
-   'col': 2,
-   'salary': 74323,
-   'mindiff': 0.00879999999597203},
-  370.8043: {'row': 7,
-   'col': 1,
-   'salary': 68228,
-   'mindiff': 0.00879999999597203},
-  302.9511: {'row': 4,
-   'col': 0,
-   'salary': 55743,
-   'mindiff': 0.0023999999975785613},
-  263.5544: {'row': 2,
-   'col': 0,
-   'salary': 48494,
-   'mindiff': 0.009599999997590203},
-  444.2552: {'row': 9,
-   'col': 2,
-   'salary': 81743,
-   'mindiff': 0.04320000000006985},
-  322.6413: {'row': 5,
-   'col': 0,
-   'salary': 59366,
-   'mindiff': 0.000800000001618173},
-  331.4076: {'row': 5,
-   'col': 1,
-   'salary': 60979,
-   'mindiff': 0.001600000003236346},
-  444.26: {'row': 9, 'col': 2, 'salary': 81743, 'mindiff': 0.8399999999965075},
-  361.9348: {'row': 6,
-   'col': 4,
-   'salary': 66596,
-   'mindiff': 0.003200000006472692},
-  379.38: {'row': 7,
-   'col': 4,
-   'salary': 69806,
-   'mindiff': 0.08000000000174623},
-  389.9: {'row': 8, 'col': 0, 'salary': 71741, 'mindiff': 0.5999999999912689},
-  277.5979: {'row': 2,
-   'col': 2,
-   'salary': 51078,
-   'mindiff': 0.01359999999840511},
-  284.7446: {'row': 2,
-   'col': 5,
-   'salary': 52393,
-   'mindiff': 0.0063999999983934686},
-  277.5978: {'row': 2,
-   'col': 2,
-   'salary': 51078,
-   'mindiff': 0.004799999995157123},
-  224.3804: {'row': 0,
-   'col': 0,
-   'salary': 41286,
-   'mindiff': 0.0063999999983934686},
-  277.6: {'row': 2, 'col': 2, 'salary': 51078, 'mindiff': 0.4000000000014552},
-  257.9021: {'row': 1,
-   'col': 2,
-   'salary': 47454,
-   'mindiff': 0.01359999999840511},
-  243.8641: {'row': 1,
-   'col': 0,
-   'salary': 44871,
-   'mindiff': 0.005599999996775296}},
- '2016-2017': {438.4511: {'row': 9,
-   'col': 1,
-   'salary': 80675,
-   'mindiff': 0.0023999999975785613},
-  336.6902: {'row': 5,
-   'col': 2,
-   'salary': 61951,
-   'mindiff': 0.0031999999991967343},
-  428.7935: {'row': 9,
-   'col': 0,
-   'salary': 78898,
-   'mindiff': 0.004000000000814907},
-  444.2554: {'row': 9,
-   'col': 2,
-   'salary': 81743,
-   'mindiff': 0.0063999999983934686},
-  317.0: {'row': 4, 'col': 2, 'salary': 58328, 'mindiff': 0.0},
-  450.3587: {'row': 9,
-   'col': 4,
-   'salary': 82866,
-   'mindiff': 0.0007999999943422154},
-  448.0326: {'row': 9,
-   'col': 3,
-   'salary': 82438,
-   'mindiff': 0.001600000003236346},
-  376.0815: {'row': 7,
-   'col': 2,
-   'salary': 69199,
-   'mindiff': 0.004000000000814907},
-  302.9511: {'row': 4,
-   'col': 0,
-   'salary': 55743,
-   'mindiff': 0.0023999999975785613},
-  403.9293: {'row': 8,
-   'col': 2,
-   'salary': 74323,
-   'mindiff': 0.00879999999597203},
-  277.5978: {'row': 2,
-   'col': 2,
-   'salary': 51078,
-   'mindiff': 0.004799999995157123},
-  283.25: {'row': 3, 'col': 0, 'salary': 52118, 'mindiff': 0.0},
-  362.0435: {'row': 7,
-   'col': 0,
-   'salary': 66616,
-   'mindiff': 0.004000000000814907},
-  452.1196: {'row': 9,
-   'col': 5,
-   'salary': 83190,
-   'mindiff': 0.0063999999983934686},
-  389.8967: {'row': 8,
-   'col': 0,
-   'salary': 71741,
-   'mindiff': 0.007199999992735684},
-  356.3804: {'row': 6,
-   'col': 2,
-   'salary': 65574,
-   'mindiff': 0.0063999999983934686},
-  398.6576: {'row': 8,
-   'col': 1,
-   'salary': 73353,
-   'mindiff': 0.001600000003236346},
-  322.6413: {'row': 5,
-   'col': 0,
-   'salary': 59366,
-   'mindiff': 0.000800000001618173},
-  351.1141: {'row': 6,
-   'col': 1,
-   'salary': 64605,
-   'mindiff': 0.005599999996775296},
-  263.5543: {'row': 2,
-   'col': 0,
-   'salary': 48494,
-   'mindiff': 0.00879999999597203},
-  257.9022: {'row': 1,
-   'col': 2,
-   'salary': 47454,
-   'mindiff': 0.004799999995157123},
-  379.3804: {'row': 7,
-   'col': 4,
-   'salary': 69806,
-   'mindiff': 0.0063999999983934686},
-  444.255: {'row': 9,
-   'col': 2,
-   'salary': 81743,
-   'mindiff': 0.08000000000174623},
-  297.2826: {'row': 3,
-   'col': 2,
-   'salary': 54700,
-   'mindiff': 0.001600000003236346},
-  304.4457: {'row': 3,
-   'col': 5,
-   'salary': 56018,
-   'mindiff': 0.00879999999597203},
-  243.8641: {'row': 1,
-   'col': 0,
-   'salary': 44871,
-   'mindiff': 0.005599999996775296},
-  448.0325: {'row': 9,
-   'col': 3,
-   'salary': 82438,
-   'mindiff': 0.01999999998952262},
-  238.4293: {'row': 0,
-   'col': 2,
-   'salary': 43871,
-   'mindiff': 0.00879999999597203},
-  224.3804: {'row': 0,
-   'col': 0,
-   'salary': 41286,
-   'mindiff': 0.0063999999983934686},
-  233.1522: {'row': 0,
-   'col': 1,
-   'salary': 42900,
-   'mindiff': 0.004799999995157123},
-  243.8643: {'row': 1,
-   'col': 0,
-   'salary': 44871,
-   'mindiff': 0.031199999997625127},
-  243.864: {'row': 1,
-   'col': 0,
-   'salary': 44871,
-   'mindiff': 0.023999999997613486},
-  438.451: {'row': 9,
-   'col': 1,
-   'salary': 80675,
-   'mindiff': 0.01600000000325963},
-  272.3152: {'row': 2,
-   'col': 1,
-   'salary': 50106,
-   'mindiff': 0.0031999999991967343},
-  224.3803: {'row': 0,
-   'col': 0,
-   'salary': 41286,
-   'mindiff': 0.02479999999923166}},
- '2017-2018': {363.5054: {'row': 6,
-   'col': 2,
-   'salary': 66885.0,
-   'mindiff': 0.0063999999983934686},
-  437.3696: {'row': 9,
-   'col': 0,
-   'salary': 80476.0,
-   'mindiff': 0.0063999999983934686},
-  453.1413: {'row': 9,
-   'col': 2,
-   'salary': 83378.0,
-   'mindiff': 0.0007999999943422154},
-  343.4239: {'row': 5,
-   'col': 2,
-   'salary': 63190.0,
-   'mindiff': 0.0023999999975785613},
-  459.3641: {'row': 9,
-   'col': 4,
-   'salary': 84523.0,
-   'mindiff': 0.005600000004051253},
-  456.9946: {'row': 9,
-   'col': 3,
-   'salary': 84087.0,
-   'mindiff': 0.0063999999983934686},
-  412.0054: {'row': 8,
-   'col': 2,
-   'salary': 75809.0,
-   'mindiff': 0.0063999999983934686},
-  447.2228: {'row': 9,
-   'col': 1,
-   'salary': 82288.0,
-   'mindiff': 0.9952000000048429},
-  329.0924: {'row': 5,
-   'col': 0,
-   'salary': 60553.0,
-   'mindiff': 0.001600000003236346},
-  303.2283: {'row': 3,
-   'col': 2,
-   'salary': 55794.0,
-   'mindiff': 0.0072000000000116415},
-  309.0109: {'row': 4,
-   'col': 0,
-   'salary': 56858.0,
-   'mindiff': 0.005599999996775296},
-  323.3424: {'row': 4,
-   'col': 2,
-   'salary': 59495.0,
-   'mindiff': 0.001600000003236346},
-  397.6957: {'row': 8,
-   'col': 0,
-   'salary': 73176.0,
-   'mindiff': 0.00879999999597203},
-  461.163: {'row': 9,
-   'col': 5,
-   'salary': 84854.0,
-   'mindiff': 0.008000000001629815},
-  309.0108: {'row': 4,
-   'col': 0,
-   'salary': 56858.0,
-   'mindiff': 0.012799999996786937},
-  383.6033: {'row': 7,
-   'col': 2,
-   'salary': 70583.0,
-   'mindiff': 0.007199999992735684},
-  349.1902: {'row': 6,
-   'col': 0,
-   'salary': 64251.0,
-   'mindiff': 0.0031999999991967343},
-  378.2228: {'row': 7,
-   'col': 1,
-   'salary': 69593.0,
-   'mindiff': 0.004799999995157123},
-  349.1903: {'row': 6,
-   'col': 0,
-   'salary': 64251.0,
-   'mindiff': 0.015199999994365498},
-  288.913: {'row': 3,
-   'col': 0,
-   'salary': 53160.0,
-   'mindiff': 0.008000000001629815},
-  283.1522: {'row': 2,
-   'col': 2,
-   'salary': 52100.0,
-   'mindiff': 0.004799999995157123},
-  268.8261: {'row': 2,
-   'col': 0,
-   'salary': 49464.0,
-   'mindiff': 0.0023999999975785613},
-  263.0598: {'row': 1,
-   'col': 2,
-   'salary': 48403.0,
-   'mindiff': 0.0031999999991967343},
-  228.8696: {'row': 0,
-   'col': 0,
-   'salary': 42112.0,
-   'mindiff': 0.0063999999983934686},
-  363.5055: {'row': 6,
-   'col': 2,
-   'salary': 66885.0,
-   'mindiff': 0.012000000002444722},
-  257.6848: {'row': 1,
-   'col': 1,
-   'salary': 47414.0,
-   'mindiff': 0.0031999999991967343},
-  248.7391: {'row': 1,
-   'col': 0,
-   'salary': 45768.0,
-   'mindiff': 0.005599999996775296},
-  243.1957: {'row': 0,
-   'col': 2,
-   'salary': 44748.0,
-   'mindiff': 0.00879999999597203},
-  390.8967: {'row': 7,
-   'col': 5,
-   'salary': 71925.0,
-   'mindiff': 0.007199999992735684}},
- '2018-2019': {392.2337: {'row': 7,
-   'col': 2,
-   'salary': 72171.0,
-   'mindiff': 0.0007999999943422154},
-  447.212: {'row': 9,
-   'col': 0,
-   'salary': 82287.0,
-   'mindiff': 0.008000000001629815},
-  463.337: {'row': 9,
-   'col': 2,
-   'salary': 85254.0,
-   'mindiff': 0.008000000001629815},
-  371.6848: {'row': 6,
-   'col': 2,
-   'salary': 68390.0,
-   'mindiff': 0.003200000006472692},
-  469.7011: {'row': 9,
-   'col': 4,
-   'salary': 86425.0,
-   'mindiff': 0.0023999999975785613},
-  467.2772: {'row': 9,
-   'col': 3,
-   'salary': 85979.0,
-   'mindiff': 0.004799999995157123},
-  457.2826: {'row': 9,
-   'col': 1,
-   'salary': 84139.0,
-   'mindiff': 0.9983999999967637},
-  336.5: {'row': 5, 'col': 0, 'salary': 61915.0, 'mindiff': 1.0},
-  357.0435: {'row': 6,
-   'col': 0,
-   'salary': 65697.0,
-   'mindiff': 0.9959999999991851},
-  330.6141: {'row': 4,
-   'col': 2,
-   'salary': 60834.0,
-   'mindiff': 1.0055999999967753},
-  447.2228: {'row': 9,
-   'col': 0,
-   'salary': 82287.0,
-   'mindiff': 1.9952000000048429},
-  351.1522: {'row': 5,
-   'col': 2,
-   'salary': 64612.0,
-   'mindiff': 0.004799999995157123},
-  471.538: {'row': 9,
-   'col': 5,
-   'salary': 86763.0,
-   'mindiff': 0.008000000001629815},
-  421.2772: {'row': 8,
-   'col': 2,
-   'salary': 77515.0,
-   'mindiff': 0.004799999995157123},
-  377.5924: {'row': 7,
-   'col': 0,
-   'salary': 69477.0,
-   'mindiff': 0.001600000003236346},
-  415.7826: {'row': 8,
-   'col': 1,
-   'salary': 76503.0,
-   'mindiff': 0.9983999999967637},
-  315.962: {'row': 4,
-   'col': 0,
-   'salary': 58137.0,
-   'mindiff': 0.008000000001629815},
-  310.0489: {'row': 3,
-   'col': 2,
-   'salary': 57049.0,
-   'mindiff': 0.0023999999975785613},
-  274.875: {'row': 2, 'col': 0, 'salary': 50577.0, 'mindiff': 0.0},
-  295.413: {'row': 3,
-   'col': 0,
-   'salary': 54356.0,
-   'mindiff': 0.008000000001629815},
-  289.5217: {'row': 2,
-   'col': 2,
-   'salary': 53272.0,
-   'mindiff': 0.0072000000000116415},
-  284.0109: {'row': 2,
-   'col': 1,
-   'salary': 52258.0,
-   'mindiff': 0.005599999996775296},
-  254.337: {'row': 1,
-   'col': 0,
-   'salary': 46798.0,
-   'mindiff': 0.008000000001629815},
-  268.9783: {'row': 1,
-   'col': 2,
-   'salary': 49492.0,
-   'mindiff': 0.0072000000000116415},
-  428.7391: {'row': 8,
-   'col': 5,
-   'salary': 78888.0,
-   'mindiff': 0.005600000004051253},
-  248.6685: {'row': 0,
-   'col': 2,
-   'salary': 45755.0,
-   'mindiff': 0.004000000000814907},
-  234.0163: {'row': 0,
-   'col': 0,
-   'salary': 43060.0,
-   'mindiff': 1.0008000000016182},
-  296.9728: {'row': 2,
-   'col': 5,
-   'salary': 54643.0,
-   'mindiff': 0.004799999995157123}},
- '2019-2020': {421.2772: {'row': 8,
-   'col': 2,
-   'salary': 77515,
-   'mindiff': 0.004799999995157123},
-  447.212: {'row': 9,
-   'col': 0,
-   'salary': 82287,
-   'mindiff': 0.008000000001629815},
-  463.337: {'row': 9,
-   'col': 2,
-   'salary': 85254,
-   'mindiff': 0.008000000001629815},
-  392.2337: {'row': 7,
-   'col': 2,
-   'salary': 72171,
-   'mindiff': 0.0007999999943422154},
-  469.7011: {'row': 9,
-   'col': 4,
-   'salary': 86425,
-   'mindiff': 0.0023999999975785613},
-  467.2772: {'row': 9,
-   'col': 3,
-   'salary': 85979,
-   'mindiff': 0.004799999995157123},
-  377.5924: {'row': 7,
-   'col': 0,
-   'salary': 69477,
-   'mindiff': 0.001600000003236346},
-  351.1522: {'row': 5,
-   'col': 2,
-   'salary': 64612,
-   'mindiff': 0.004799999995157123},
-  457.2826: {'row': 9,
-   'col': 1,
-   'salary': 84140,
-   'mindiff': 0.001600000003236346},
-  371.6848: {'row': 6,
-   'col': 2,
-   'salary': 68390,
-   'mindiff': 0.003200000006472692},
-  471.538: {'row': 9,
-   'col': 5,
-   'salary': 86763,
-   'mindiff': 0.008000000001629815},
-  357.0435: {'row': 6,
-   'col': 0,
-   'salary': 65696,
-   'mindiff': 0.004000000000814907},
-  406.6413: {'row': 8,
-   'col': 0,
-   'salary': 74822,
-   'mindiff': 0.0007999999943422154},
-  336.5: {'row': 5, 'col': 0, 'salary': 61916, 'mindiff': 0.0},
-  330.6141: {'row': 4,
-   'col': 2,
-   'salary': 60833,
-   'mindiff': 0.005599999996775296},
-  315.962: {'row': 4,
-   'col': 0,
-   'salary': 58137,
-   'mindiff': 0.008000000001629815},
-  467.2777: {'row': 9,
-   'col': 3,
-   'salary': 85979,
-   'mindiff': 0.09679999999934807},
-  469.701: {'row': 9,
-   'col': 4,
-   'salary': 86425,
-   'mindiff': 0.01600000000325963},
-  351.1521: {'row': 5,
-   'col': 2,
-   'salary': 64612,
-   'mindiff': 0.01359999999840511},
-  254.337: {'row': 1,
-   'col': 0,
-   'salary': 46798,
-   'mindiff': 0.008000000001629815},
-  248.6685: {'row': 0,
-   'col': 2,
-   'salary': 45755,
-   'mindiff': 0.004000000000814907},
-  310.0489: {'row': 3,
-   'col': 2,
-   'salary': 57049,
-   'mindiff': 0.0023999999975785613},
-  274.875: {'row': 2, 'col': 0, 'salary': 50577, 'mindiff': 0.0},
-  304.5489: {'row': 3,
-   'col': 1,
-   'salary': 56037,
-   'mindiff': 0.0023999999975785613},
-  295.413: {'row': 3,
-   'col': 0,
-   'salary': 54356,
-   'mindiff': 0.008000000001629815},
-  325.0924: {'row': 4,
-   'col': 1,
-   'salary': 59817,
-   'mindiff': 0.001600000003236346},
-  289.5217: {'row': 2,
-   'col': 2,
-   'salary': 53272,
-   'mindiff': 0.0072000000000116415},
-  268.9783: {'row': 1,
-   'col': 2,
-   'salary': 49492,
-   'mindiff': 0.0072000000000116415},
-  427.0707: {'row': 8,
-   'col': 4,
-   'salary': 78581,
-   'mindiff': 0.00879999999597203}}}
