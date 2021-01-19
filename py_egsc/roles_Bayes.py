@@ -279,33 +279,29 @@ class Teacher(Role):
         payperiods       = parent_role.get_payperiods()
         person           = parent_role.get_parent_person()  #parent person object
         name             = person.get_name()                #name of person
-        payment_type     = 'Other or unknown'
         
         error_tolerance  = 3
-                
-        if (rate == 0.0):                          #zero rate
-
-            payment_type = "Other or unknown"
-            return
         
-        elif (obj == '51323'):                       #detention coverage
+        if (obj == '51323'):                       #detention coverage
 
-            payment_type = "Detention coverage"
             if (rate > 0.0):
                 hours = round(earnings/rate,2)
                 lineitem.update_stepinfo('hours',hours)
+                lineitem.set_payment_type("Detention coverage")
             return;
         
         elif (obj == '51327'):                       #other additional compensation
 
-            payment_type = "Other additional compensation"
             if (rate > 0.0):
                 hours = round(earnings/rate,2)  
                 lineitem.update_stepinfo('hours',hours)
+                lineitem.set_payment_type("Other additional compensation")
             return
         
                     
         elif rate in rate_lookup[school_year].keys():
+            
+            lineitem.set_payment_type("Contract salary")
             
             col = rate_lookup[school_year][rate]['col']
             self.update_priors('col',col,ppo)
@@ -344,8 +340,54 @@ class Teacher(Role):
                             pmts = self.n_payments[pmtix[i]]
                             lineitem.update_stepinfo('payments',pmts)
                             lineitem.update_stepinfo('fte',fte)
+                            lineitem.update_stepinfo('from_prior',False)
                        
-                            within_error_tolerance = True                                    
+                            within_error_tolerance = True
+                        
+        else:                                    #fill in from priors if possible
+            priors = ppo.get_priors()
+            fte_priors = ppo.get_fte_priors()
+
+            col = None
+            for i in priors['col'].keys():
+                if (priors['col'][i] > 0.9):
+                    col = i
+
+            row = None
+            for i in priors['row'].keys():
+                if (priors['row'][i] > 0.9):
+                    row = i
+              
+            payments = None
+            for i in priors['payments'].keys():
+                if (priors['payments'][i] > 0.9):
+                    payments = i
+                            
+            ftes = {}
+            try:
+                for ftk in fte_priors.keys():
+                    maxftk = 0.0
+                    try:
+                        for i in fte_priors[ftk].keys():
+                            if (fte_priors[ftk][i] > maxftk):
+                                maxftk = fte_priors[ftk][i]
+                        ftes[ftk] = round(maxftk,4)
+                    except TypeError:
+                        print('TypeError',ftk,maxftk,fte_priors[ftk][i])
+            except KeyError:
+                  print('decode earnings from priors',ftekey,ftepriors)
+                      
+            if ((col is not None) & (row is not None)):
+                lineitem.update_stepinfo('step',school_year + '-' + self.col_names[col] + \
+                    '-' + str(row+1))        #code is:  yyyy-yyyy-cat-step
+                lineitem.update_stepinfo('salary',self.cba[school_year][row][col])
+            if (payments is not None):
+                lineitem.update_stepinfo('payments',self.n_payments[payments])
+            if (ftes is not None):
+                lineitem.update_stepinfo('ftes',ftes)
+            lineitem.update_stepinfo('from_prior',True)
+            lineitem.set_payment_type('Other or unknown')
+            
         return
         
 class Para(Role):
@@ -353,54 +395,56 @@ class Para(Role):
     def __init__(self, person, role_name):
         Role.__init__(self, person, role_name) 
         
-        self.empirical_priors = {}                             #empirical priors
+        #empirical priors
+        self.empirical_priors = {0: {0: 0.020313942751615882, 1: 0.029085872576177285, 2: 0.041089566020313946, 
+                3: 0.050784856879039705, 4: 0.04016620498614958, 5: 0.012003693444136657, 6: 0.8065558633425669},
+         1: {0: 0.015625, 1: 0.00390625, 2: 0.00390625, 3: 0.10546875, 4: 0.203125, 5: 0.0078125, 6: 0.66015625},
+         2: {0: 0.03303883673845021, 1: 0.04638321369409166, 2: 0.04831584759801215, 3: 0.04233388551444874,
+                4: 0.036628013988588254, 5: 0.03285477636664826, 6: 0.7604454260997607}}
 
         self.cba = {
             '2019-2020':{
-                'Para':    {7:19.91, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
-                'Office':  {7:23.76, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
-                'Central': {7:27.67, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26}
+                0: {7:19.91, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
+                1: {7:23.76, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
+                2: {7:27.67, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26}
             },
             '2018-2019':{
-                'Para':    {7:19.52, 6:18.42, 5:17.51, 4:17.02, 3:16.51, 2:16.16, 1:15.66},
-                'Office':  {7:23.29, 6:21.38, 5:20.37, 4:19.37, 3:18.33, 2:17.61, 1:17.10},
-                'Central': {7:27.13, 6:25.12, 5:24.09, 4:23.10, 3:22.07, 2:21.35, 1:20.84}
+                0: {7:19.52, 6:18.42, 5:17.51, 4:17.02, 3:16.51, 2:16.16, 1:15.66},
+                1: {7:23.29, 6:21.38, 5:20.37, 4:19.37, 3:18.33, 2:17.61, 1:17.10},
+                2: {7:27.13, 6:25.12, 5:24.09, 4:23.10, 3:22.07, 2:21.35, 1:20.84}
             },
             '2017-2018':{
-                'Para':    {7:19.14, 6:18.06, 5:17.17, 4:16.69, 3:16.19, 2:15.84, 1:15.35},
-                'Office':  {7:22.83, 6:20.96, 5:19.97, 4:18.99, 3:17.97, 2:17.26, 1:16.76},
-                'Central': {7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43}
+                0: {7:19.14, 6:18.06, 5:17.17, 4:16.69, 3:16.19, 2:15.84, 1:15.35},
+                1: {7:22.83, 6:20.96, 5:19.97, 4:18.99, 3:17.97, 2:17.26, 1:16.76},
+                2: {7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43}
             },
             '2016-2017':{
-                'Para':    {7:19.14, 6:18.06, 5:17.17, 4:16.69, 3:16.19, 2:15.84, 1:15.35},
-                'Office':  {7:22.83, 6:20.96, 5:19.97, 4:18.99, 3:17.97, 2:17.26, 1:16.76},
-                'Central': {7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43}
+                0: {7:19.14, 6:18.06, 5:17.17, 4:16.69, 3:16.19, 2:15.84, 1:15.35},
+                1: {7:22.83, 6:20.96, 5:19.97, 4:18.99, 3:17.97, 2:17.26, 1:16.76},
+                2: {7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43}
             },
             '2015-2016':{
-                'Para':    {7:18.77, 6:17.71, 5:16.83, 4:16.37, 3:15.88, 2:15.53, 1:15.04},
-                'Office':  {7:22.38, 6:20.55, 5:19.58, 4:18.62, 3:17.62, 2:16.92, 1:16.43},
-                'Central': {7:26.08, 6:24.15, 5:23.16, 4:22.21, 3:21.22, 2:20.52, 1:20.03}
+                0: {7:18.77, 6:17.71, 5:16.83, 4:16.37, 3:15.88, 2:15.53, 1:15.04},
+                1: {7:22.38, 6:20.55, 5:19.58, 4:18.62, 3:17.62, 2:16.92, 1:16.43},
+                2: {7:26.08, 6:24.15, 5:23.16, 4:22.21, 3:21.22, 2:20.52, 1:20.03}
             },
             '2014-2015':{
-                'Para':    {7:18.40, 6:17.36, 5:16.50, 4:16.04, 3:15.57, 2:15.23, 1:14.75},
-                'Office':  {7:21.94, 6:20.15, 5:19.19, 4:18.25, 3:17.27, 2:16.59, 1:16.11},
-                'Central': {7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64}
+                0: {7:18.40, 6:17.36, 5:16.50, 4:16.04, 3:15.57, 2:15.23, 1:14.75},
+                1: {7:21.94, 6:20.15, 5:19.19, 4:18.25, 3:17.27, 2:16.59, 1:16.11},
+                2: {7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64}
             },
             '2013-2014':{
-                'Para':    {7:18.04, 6:17.02, 5:16.18, 4:15.73, 3:15.26, 2:14.93, 1:14.46},
-                'Office':  {7:21.51, 6:20.15, 5:19.19, 4:18.25, 3:17.27, 2:16.59, 1:16.11},
-                'Central': {7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64}
+                0: {7:18.04, 6:17.02, 5:16.18, 4:15.73, 3:15.26, 2:14.93, 1:14.46},
+                1: {7:21.51, 6:20.15, 5:19.19, 4:18.25, 3:17.27, 2:16.59, 1:16.11},
+                2: {7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64}
             }
                 
         }
         
-        with open('../../finance_subcommittee/para_rate_lookup_1_16_2021.pkl', 'rb') as handle:
+        self.jobs = {0:'Office',1:'Central',2:'Para'}
+        
+        with open('../../finance_subcommittee/para_rate_lookup_1_18_2021.pkl', 'rb') as handle:
             self.para_rate_lookup =  pickle.load(handle)
-            
-        with open('../../finance_subcommittee/para_priors_1_16_2021.pkl', 'rb') as handle:
-            self.para_priors =  pickle.load(handle)
-            
-        self.set_empirical_priors(self.para_priors)
             
         return
     
@@ -444,41 +488,58 @@ class Para(Role):
         school_year      = ppo.get_school_year()            #school year for current lineitem
         syseq            = ppo.get_school_year_seq()        #school year sequence number
         parent_role      = ppo.get_parent_role()            #get parent role
-        rate_lookup      = self.get_rate_lookup()
+        rate_lookup      = self.para_rate_lookup
         person           = self.get_parent_person()  #parent person object
         name             = person.get_name()                #name of person
         payment_type     = 'Other or unknown'
         
         error_tolerance  = 3
-                
-        if (rate == 0.0):                          #zero rate
-
-            payment_type = "Other or unknown"
-            return
-          
-        elif str(rate) in rate_lookup[school_year].keys():
-            
+                  
+        if str(rate) in rate_lookup[school_year].keys():
+            lineitem.set_payment_type("Contract salary")
             step = rate_lookup[school_year][str(rate)]['step'] - 1
             job = rate_lookup[school_year][str(rate)]['job']
             mindiff = rate_lookup[school_year][str(rate)]['mindiff']
             hours = None
-            if (rate > 0.0):
+            if (rate > 0.0):            
                 hours = earnings/rate
-            
             self.update_priors(job,step,ppo)
             lineitem.update_stepinfo('step',school_year + '-' + str(step+1))        #code is:  yyyy-yyyy-step
             lineitem.update_stepinfo('hours',hours)    
             lineitem.update_stepinfo('mindiff',mindiff)
             lineitem.update_stepinfo('table_rate',rate)
-            lineitem.update_stepinfo('table_job',job)
-                                                   
+            lineitem.update_stepinfo('table_job',self.jobs[job])
+            lineitem.update_stepinfo('from_prior',False)
+            
+        else:
+            max_job = None
+            max_step = None
+            priors = ppo.get_priors()
+            
+            for job in priors.keys():
+                for i in priors[job].keys():
+                    prob = priors[job][i]
+                    if (prob > 0.9):
+                        max_job = job
+                        max_step = i
+            if (max_job is not None):
+                step = i+1
+                jobname = self.jobs[max_job]
+                rate = self.cba[school_year][max_job][i+1]
+                hours = None
+                if (rate > 0.0):
+                    hours = earnings/rate
+                lineitem.update_stepinfo('step',school_year + '-' + str(step))   #code is:  yyyy-yyyy-step
+                lineitem.update_stepinfo('hours',hours)    
+                lineitem.update_stepinfo('table_rate',rate)
+                lineitem.update_stepinfo('table_job',jobname)
+                lineitem.update_stepinfo('from_prior',True)
         return
         
 class Office(Para):
     
     def __init__(self, person, role_name):
         Para.__init__(self, person, role_name)
-        self.set_empirical_priors(self.para_priors)
         return
     
     def set_empirical_priors(self,prior):
@@ -507,56 +568,22 @@ class Facilities(Role):
     def __init__(self, person, role_name):
         Role.__init__(self, person, role_name)
         
-        self.empirical_priors     = {}                             #empirical priors
+        self.empirical_priors     = {0:2986./6952., 1:886./6952., 2:2323./6952., 3:757./6952., 4:1.0/6952., 5:1.0/6952.}
         self.fte_empirical_priors = {}
         
+        self.jobs = {0:'Maintenance',1:'Electrician',2:'Custodian I',3:'Custodian II', 4:'Maint Dir', 5:'Facility Dir'}
+        
+        #salary is 2080*rate
+        
         self.cba = {
-            '2019-2020': {
-                'Maintenance': {'salary': 42163.65, 'rate': 20.2710},
-                'Electrician': {'salary': 59778.57, 'rate': 28.7397},
-                'Custodian I': {'salary': 30843.54, 'rate': 14.8286},
-                'Custodian II': {'salary': 41773.18, 'rate': 20.0833}
-            },
-            '2018-2019': {
-                'Maintenance': {'salary': 41336.62, 'rate': 19.8734},
-                'Electrician': {'salary': 58606.44, 'rate': 28.1762},
-                'Custodian I': {'salary': 30018.04, 'rate': 14.4318},
-                'Custodian II': {'salary': 40954.09, 'rate': 19.6895}
-            },
-            '2017-2018': {
-                'Maintenance': {'salary': 40526.26, 'rate': 19.4837},
-                'Electrician': {'salary': 57456.35, 'rate': 27.6232},
-                'Custodian I': {'salary': 29214.57, 'rate': 14.0455},
-                'Custodian II': {'salary': 40151.02, 'rate': 19.3034}
-            },
-            '2016-2017': {
-                'Maintenance': {'salary': 41773.18, 'rate': 19.1017},
-                'Electrician': {'salary': 56329.7280, 'rate': 27.0816},
-                'Custodian I': {'salary': 29214.57, 'rate': 13.6364},
-                'Custodian II': {'salary': 40151.02, 'rate': 18.9249}
-            },
-            '2015-2016': {
-                'Maintenance': {'salary': 41773.18, 'rate': 18.7300},
-                'Electrician': {'salary': 55225.2480, 'rate': 26.5506},
-                'Custodian I': {'salary': 29214.57, 'rate': 13.2400},
-                'Custodian II': {'salary': 40151.02, 'rate': 18.5500}
-            },
-            '2014-2015': {
-                'Maintenance': {'salary': 41773.18, 'rate': 18.3600},
-                'Electrician': {'salary': 54142.40, 'rate': 26.0300},
-                'Custodian I': {'salary': 29214.57, 'rate': 12.7300},
-                'Custodian II': {'salary': 40151.02, 'rate': 18.1900}
-            },
-            '2013-2014': {
-                'Maintenance': {'salary': 41773.18, 'rate': 18.3600},
-                'Electrician': {'salary': 54142.40, 'rate': 26.0300},
-                'Custodian I': {'salary': 29214.57, 'rate': 12.7300},
-                'Custodian II': {'salary': 40151.02, 'rate': 18.2900}
+            '2019-2020': {0:20.2710, 1:28.7397, 2:14.8286, 3:20.0833, 4:30.6000, 5:37.3368},
+            '2018-2019': {0:19.8734, 1:28.1762, 2:14.4318, 3:19.6895, 4:29.5500, 5:36.6046},
+            '2017-2018': {0:19.4837, 1:27.6232, 2:14.0455, 3:19.3034, 4:29.5500, 5:35.8869},
+            '2016-2017': {0:19.1017, 1:27.0816, 2:13.6364, 3:18.9249, 4:28.9743, 5:35.1833},
+            '2015-2016': {0:18.7300, 1:26.5506, 2:13.2400, 3:18.5500, 4:28.4062, 5:34.8350},
+            '2014-2015': {0:18.3600, 1:26.0300, 2:12.7300, 3:18.1900, 4:27.7134, 5:33.9853},
+            '2013-2014': {0:18.3600, 2:26.0300, 2:12.7300, 3:18.2900, 4:27.7134, 5:33.3189}
             }
-        }
-        for syear in self.cba.keys():
-            for job in self.cba[syear].keys():
-                self.cba[syear][job]['ot_rate'] = 1.5*self.cba[syear][job]['rate']
         
         return
     
@@ -572,14 +599,28 @@ class Facilities(Role):
     def get_cba_matrix_by_year(self, school_year):
         return(self.cba[school_year])     
         
-    def set_default_priors(self, priors=None):
+    def xset_default_priors(self, priors=None):
         if (priors is None):
             self.default_priors['job'] = self.set_uniform_priors(4)
         else:
             self.default_priors = priors
             
-    def set_empirical_priors(self,prior):
-        self.empirical_priors = prior['FACILITIES']
+    def get_empirical_priors(self):
+        return(self.empirical_priors)
+    
+            
+    def update_priors(self,n,ppo):
+        """update_priors(param,value) updates the priors for param given value"""
+        try:
+            for i in ppo.priors.keys():
+                ppo.priors[i] = 0.5*ppo.priors[i]
+        except KeyError:
+            print('Facilities - update_priors KeyError ',n,ppo.priors)
+            return
+        try:
+            ppo.priors[n] += 0.5
+        except KeyError:
+            print('Facilities - update_priors KeyError ',n,ppo.priors)
         return
         
     def decode_earnings(self,lineitem):
@@ -603,12 +644,13 @@ class Facilities(Role):
         
         error_tolerance  = 3
                 
-        if (rate == 0.0):                          #zero rate
+        if (rate < 0.0):                          #zero rate
 
-            payment_type = "Other or unknown"
+            lineitem.set_payment_type("Other or unknown")
             return
           
-        elif ((rate > 15.0) & (rate < 30.0)):
+        #elif ((rate > 15.0) & (rate < 30.0)):
+        else:
             
             mindiff = 1000.0
             min_sy = None
@@ -617,30 +659,57 @@ class Facilities(Role):
             
             for sy in self.cba.keys():
                 for job in self.cba[sy].keys():
-                    diff = abs(rate - self.cba[sy][job]['rate'])
+                    diff = abs(rate - self.cba[sy][job])
                     if (diff < mindiff):
                         mindiff = diff
                         min_sy = sy
                         min_job = job
                         min_OT = False
-                    diff = abs(rate - self.cba[sy][job]['ot_rate'])
+                    diff = abs(rate - 1.5*self.cba[sy][job])
                     if (diff < mindiff):
                         mindiff = diff
                         min_sy = sy
                         min_job = job
                         min_OT = True
             
-            cba_rate = self.cba[min_sy][min_job]['rate']
+            cba_rate = self.cba[min_sy][min_job]
             if (rate > 0.0):
                 hours = round(earnings/rate,4)
+            else:
+                hours = None
+                
+            if (mindiff < error_tolerance):
 
-            lineitem.update_stepinfo('cba_rate',cba_rate) 
-            lineitem.update_stepinfo('hours',hours)    
-            lineitem.update_stepinfo('mindiff',round(mindiff,4))
-            lineitem.update_stepinfo('syear',min_sy)
-            lineitem.update_stepinfo('job',min_job)
-            lineitem.update_stepinfo('OT',min_OT)
-            lineitem.update_stepinfo('hours',hours)
+                lineitem.update_stepinfo('cba_rate',cba_rate) 
+                lineitem.update_stepinfo('hours',hours)    
+                lineitem.update_stepinfo('mindiff',round(mindiff,4))
+                lineitem.update_stepinfo('syear',min_sy)
+                lineitem.update_stepinfo('job',self.jobs[min_job])
+                lineitem.update_stepinfo('OT',min_OT)
+                lineitem.update_stepinfo('hours',hours)
+                lineitem.update_stepinfo('from_priors',False)
+                lineitem.set_payment_type("Contract salary")
+                self.update_priors(min_job,ppo)
+            else:                                                   #doesn't match, use priors
+                max_prob = 0.0
+                max_job  = None
+                
+                priors = ppo.get_priors()
+                for i in priors.keys():
+                    if (priors[i] > max_prob):
+                        max_prob = priors[i]
+                        max_job  = i
+                cba_rate = self.cba[school_year][max_job]
+                if (max_prob > 0.9):
+                    lineitem.update_stepinfo('cba_rate',cba_rate) 
+                    lineitem.update_stepinfo('mindiff',round(mindiff,4))
+                    lineitem.update_stepinfo('syear',school_year)
+                    lineitem.update_stepinfo('job',self.jobs[max_job])
+                    if (hours is not None):
+                        lineitem.update_stepinfo('hours',hours)
+                    lineitem.update_stepinfo('from_priors',True)
+                    lineitem.set_payment_type("Other or unknown")
+                        
                                                    
         return
     

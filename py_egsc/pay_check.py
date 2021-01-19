@@ -64,10 +64,6 @@ class Check_lineitem():                                                       #c
                       9:'Other additional compensation', 10:'Contract overtime rate', \
                       99:'Other or unknown'}
         
-        #ppp = self.parent_check.get_parent_payperiod()   #call setup_priors in parent role
-        #parent_role = ppp.get_parent_role()
-        #parent_role.setup_priors(self)
-        
         return
            
     def get_fund(self):
