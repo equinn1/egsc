@@ -8,6 +8,7 @@ class Pay_check():                                                            #g
         self.name           = name
         self.check_date     = check_date
         self.items          = {}
+        self.check_id       = None
         self.parent_payperiod = payperiod
         return
 
@@ -31,6 +32,13 @@ class Pay_check():                                                            #g
     
     def get_number(self):
         return(self.check_number)
+    
+    def get_check_id(self):
+        return(self.check_id)
+    
+    def set_check_id(self,ckid):
+        self.check_id = ckid
+        return
    
     def get_items(self):
         return(self.items)
@@ -62,6 +70,12 @@ class Check_lineitem():                                                       #c
                       6:'Contract salary adjustment', \
                       7:'Contract rate: step 7 stipend',8:'Class coverage', \
                       9:'Other additional compensation', 10:'Contract overtime rate', \
+                      11:'Health and Medical',12:'Early Retirement Incentive', \
+                      13:'Mentoring',14:'Stipend - Coaches/Advisors',15:'Stipend - other', \
+                      16:'Professional Development and Training Services',17:'Class Overage/Weighting', \
+                      18:'Stipend - mentors',19:'Coverage - other',20:'Professional Development and Training',  \
+                      21:'Summer Pay',22:'Stipend - Athletic Officials',23:'Officials/Referees', \
+                      24:'nosuch',25:'Coach/Advisor stipend', \
                       99:'Other or unknown'}
         
         return
@@ -117,7 +131,7 @@ class Check_lineitem():                                                       #c
             if (new_type == self.payment_types[key]):
                 valid_type = True
         if not valid_type:
-            print("Valid payment_type codes are ",self.payment_types)
+            print("Valid payment_type codes are ",new_type,self.payment_types)
         else:
             self.payment_type = new_type
         return

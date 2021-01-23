@@ -246,16 +246,17 @@ class Teacher(Role):
     def update_fte_priors(self,ftekey,n,ppo):
         """Updates prior FTE Dirichlet probabilities"""
         ftep = ppo.get_fte_priors()
-        if ftekey not in ftep.keys():            #first entry for this key
-            ppo.set_fte_priors_by_key(ftekey,self.fte_empirical_priors)
+        if (('51110' in ftekey) | ('51132' in ftekey)):
+            if ftekey not in ftep.keys():            #first entry for this key
+                ppo.set_fte_priors_by_key(ftekey,self.fte_empirical_priors)
             
-        for i in ppo.fte_priors[ftekey].keys():
-            ppo.fte_priors[ftekey][i] = 0.5*ppo.fte_priors[ftekey][i]
-        try:
-            ppo.fte_priors[ftekey][n] += 0.5
-        except KeyError:
-            print('update_fte_priors KeyError ',ftekey,n)
-            print('fte_priors dictionary ',ppo.fte_priors)
+            for i in ppo.fte_priors[ftekey].keys():
+                ppo.fte_priors[ftekey][i] = 0.5*ppo.fte_priors[ftekey][i]
+            try:
+                ppo.fte_priors[ftekey][n] += 0.5
+            except KeyError:
+                print('update_fte_priors KeyError ',ftekey,n)
+                print('fte_priors dictionary ',ppo.fte_priors)
         return                              
     
     #get step, FTE, # of payments for teachers
@@ -264,7 +265,7 @@ class Teacher(Role):
        
         fund             = lineitem.get_fund()
         obj              = lineitem.get_obj()
-        rate             = lineitem.get_rate()
+        rate             = float(lineitem.get_rate())
         acct             = lineitem.get_acct()
         ftekey           = lineitem.get_ftekey()
         in_earnings      = lineitem.get_earnings()
@@ -282,13 +283,26 @@ class Teacher(Role):
         
         error_tolerance  = 3
         
+        lineitem.set_payment_type("Other or unknown")
+        
+        if ((rate > 29.9999) & (rate < 30.0001)):                       #detention coverage
+            hours = round(earnings/rate,2)
+            lineitem.update_stepinfo('hours',hours)
+            if (obj in ['51110','51339','21010']):
+                lineitem.set_payment_type("Coverage - other")
+                        
+        if ((rate > 37.9999) & (rate < 38.0001)):                       #detention coverage
+            hours = round(earnings/rate,2)
+            lineitem.update_stepinfo('hours',hours)
+            if ((obj == '51110') | (obj =='51339')):
+                lineitem.set_payment_type("Coverage - other")
+        
         if (obj == '51323'):                       #detention coverage
 
             if (rate > 0.0):
                 hours = round(earnings/rate,2)
                 lineitem.update_stepinfo('hours',hours)
-                lineitem.set_payment_type("Detention coverage")
-            return;
+            lineitem.set_payment_type("Detention coverage")
         
         elif (obj == '51327'):                       #other additional compensation
 
@@ -296,9 +310,55 @@ class Teacher(Role):
                 hours = round(earnings/rate,2)  
                 lineitem.update_stepinfo('hours',hours)
                 lineitem.set_payment_type("Other additional compensation")
-            return
+                
+        elif (obj == '51328'):                       #early retirement incentive
+
+            lineitem.set_payment_type("Early Retirement Incentive")
+                            
+        elif (obj == '51336'):                    
+
+            lineitem.set_payment_type("Class Overage/Weighting")
+            
+        elif (obj == '51338'):                      
+            if (rate > 0.0):
+                hours = round(earnings/rate,2)
+                lineitem.update_stepinfo('hours',hours)
+                lineitem.set_payment_type("Summer Pay")
+            
+        elif (obj == '51401'):                       #health and medical
+
+            lineitem.set_payment_type("Stipend - other")
+            
+        elif (obj == '51404'):                       #health and medical
+
+            lineitem.set_payment_type("Stipend - Coaches/Advisors")
+                        
+        elif (obj == '51406'):                       #health and medical
+
+            lineitem.set_payment_type("Stipend - Athletic Officials")
+            
+        elif (obj == '51407'):                       #health and medical
+
+            lineitem.set_payment_type("Stipend - mentors")
+            
+        elif (obj == '52121'):                       #health and medical
+
+            lineitem.set_payment_type("Health and Medical")
+            
+        elif (obj == '53214'):                       #health and medical
+
+            lineitem.set_payment_type("Mentoring")
+                        
+        elif (obj == '53301'):                       #health and medical
+
+            lineitem.set_payment_type("Professional Development and Training")
+            
+                                    
+        elif (obj == '53416'):                       #health and medical
+
+            lineitem.set_payment_type("Officials/Referees")
+
         
-                    
         elif rate in rate_lookup[school_year].keys():
             
             lineitem.set_payment_type("Contract salary")
@@ -344,7 +404,7 @@ class Teacher(Role):
                        
                             within_error_tolerance = True
                         
-        else:                                    #fill in from priors if possible
+        else:                                    #fill in from 51110 priors if possible
             priors = ppo.get_priors()
             fte_priors = ppo.get_fte_priors()
 
@@ -386,7 +446,7 @@ class Teacher(Role):
             if (ftes is not None):
                 lineitem.update_stepinfo('ftes',ftes)
             lineitem.update_stepinfo('from_prior',True)
-            lineitem.set_payment_type('Other or unknown')
+            #lineitem.set_payment_type('Other or unknown')
             
         return
         
@@ -643,72 +703,65 @@ class Facilities(Role):
         payment_type     = 'Other or unknown'
         
         error_tolerance  = 3
-                
-        if (rate < 0.0):                          #zero rate
-
-            lineitem.set_payment_type("Other or unknown")
-            return
-          
-        #elif ((rate > 15.0) & (rate < 30.0)):
+            
+        mindiff = 1000.0
+        min_sy = None
+        min_job = None
+        min_OT  = None
+            
+        for sy in self.cba.keys():
+            for job in self.cba[sy].keys():
+                diff = abs(rate - self.cba[sy][job])
+                if (diff < mindiff):
+                    mindiff = diff
+                    min_sy = sy
+                    min_job = job
+                    min_OT = False
+                diff = abs(rate - 1.5*self.cba[sy][job])
+                if (diff < mindiff):
+                    mindiff = diff
+                    min_sy = sy
+                    min_job = job
+                    min_OT = True
+            
+        cba_rate = self.cba[min_sy][min_job]
+        if (rate > 0.0):
+            hours = round(earnings/rate,4)
         else:
-            
-            mindiff = 1000.0
-            min_sy = None
-            min_job = None
-            min_OT  = None
-            
-            for sy in self.cba.keys():
-                for job in self.cba[sy].keys():
-                    diff = abs(rate - self.cba[sy][job])
-                    if (diff < mindiff):
-                        mindiff = diff
-                        min_sy = sy
-                        min_job = job
-                        min_OT = False
-                    diff = abs(rate - 1.5*self.cba[sy][job])
-                    if (diff < mindiff):
-                        mindiff = diff
-                        min_sy = sy
-                        min_job = job
-                        min_OT = True
-            
-            cba_rate = self.cba[min_sy][min_job]
-            if (rate > 0.0):
-                hours = round(earnings/rate,4)
-            else:
-                hours = None
+            hours = None
                 
-            if (mindiff < error_tolerance):
+        if (mindiff < error_tolerance):
 
-                lineitem.update_stepinfo('cba_rate',cba_rate) 
-                lineitem.update_stepinfo('hours',hours)    
-                lineitem.update_stepinfo('mindiff',round(mindiff,4))
-                lineitem.update_stepinfo('syear',min_sy)
-                lineitem.update_stepinfo('job',self.jobs[min_job])
-                lineitem.update_stepinfo('OT',min_OT)
-                lineitem.update_stepinfo('hours',hours)
-                lineitem.update_stepinfo('from_priors',False)
-                lineitem.set_payment_type("Contract salary")
-                self.update_priors(min_job,ppo)
-            else:                                                   #doesn't match, use priors
-                max_prob = 0.0
-                max_job  = None
+            lineitem.update_stepinfo('cba_rate',cba_rate) 
+            lineitem.update_stepinfo('hours',hours)    
+            lineitem.update_stepinfo('mindiff',round(mindiff,4))
+            lineitem.update_stepinfo('syear',min_sy)
+            lineitem.update_stepinfo('job',self.jobs[min_job])
+            lineitem.update_stepinfo('OT',min_OT)
+            lineitem.update_stepinfo('hours',hours)
+            lineitem.update_stepinfo('from_priors',False)
+            lineitem.set_payment_type("Contract salary")
+            self.update_priors(min_job,ppo)
+        else:                                                   #doesn't match, use priors
+            max_prob = 0.0
+            max_job  = None
                 
-                priors = ppo.get_priors()
-                for i in priors.keys():
-                    if (priors[i] > max_prob):
-                        max_prob = priors[i]
-                        max_job  = i
-                cba_rate = self.cba[school_year][max_job]
-                if (max_prob > 0.9):
-                    lineitem.update_stepinfo('cba_rate',cba_rate) 
-                    lineitem.update_stepinfo('mindiff',round(mindiff,4))
-                    lineitem.update_stepinfo('syear',school_year)
-                    lineitem.update_stepinfo('job',self.jobs[max_job])
-                    if (hours is not None):
-                        lineitem.update_stepinfo('hours',hours)
-                    lineitem.update_stepinfo('from_priors',True)
-                    lineitem.set_payment_type("Other or unknown")
+            priors = ppo.get_priors()
+            for i in priors.keys():
+                if (priors[i] > max_prob):
+                    max_prob = priors[i]
+                    max_job  = i
+            prior_rate = self.cba[school_year][max_job]
+            if (max_prob > 0.9):
+                lineitem.update_stepinfo('cba_rate',rate)
+                lineitem.update_stepinfo('prior_rate',prior_rate) 
+                lineitem.update_stepinfo('mindiff',round(mindiff,4))
+                lineitem.update_stepinfo('syear',school_year)
+                lineitem.update_stepinfo('job',self.jobs[max_job])
+                if (hours is not None):
+                    lineitem.update_stepinfo('hours',hours)
+                lineitem.update_stepinfo('from_priors',True)
+                lineitem.set_payment_type("Other or unknown")
                         
                                                    
         return
@@ -747,18 +800,175 @@ class Substitutes(Role):
     
     def get_empirical_priors(self):
         return(self.empirical_priors)
+    
+    def decode_earnings(self,lineitem):
+       
+        fund             = lineitem.get_fund()
+        obj              = lineitem.get_obj()
+        rate             = lineitem.get_rate()
+        acct             = lineitem.get_acct()
+        in_earnings      = lineitem.get_earnings()
+        earnings         = abs(in_earnings)                 #reverse sign if earnings are negative
         
-class Substitute_teacher(Role):
+        chk              = lineitem.get_parent_check()      #parent check object
+        ppo              = chk.get_parent_payperiod()       #parent payperiod object
+        school_year      = ppo.get_school_year()            #school year for current lineitem
+        syseq            = ppo.get_school_year_seq()        #school year sequence number
+        parent_role      = ppo.get_parent_role()            #get parent role
+
+        person           = self.get_parent_person()  #parent person object
+        name             = person.get_name()                #name of person
+        
+        lineitem.set_payment_type("Other or unknown")
+            
+        if (obj in ['51110','51115','21010']):    
+            if (isinstance(parent_role,Substitute_teacher)):
+                if (str(rate) in ['75.0','125.0']):
+                    days = earnings/rate
+                    lineitem.update_stepinfo('cba_rate',rate) 
+                    lineitem.update_stepinfo('days',days)
+                    lineitem.set_payment_type("Contract salary")
+                    if (str(rate) == '75.0'):
+                        lineitem.update_stepinfo('role',"Substitute teacher")
+                    elif (str(rate) == '125.0'):
+                        lineitem.update_stepinfo('role',"Substitute nurse")
+                if (str(rate) in ['30.0']):
+                    hours = earnings/rate
+                    lineitem.update_stepinfo('cba_rate',rate) 
+                    lineitem.update_stepinfo('hours',hours)
+                    if (isinstance(parent_role,Substitute_teacher)):
+                        lineitem.update_stepinfo('role',"Substitute teacher")
+                    if (isinstance(parent_role,Substitute_para)):
+                        lineitem.update_stepinfo('role',"Substitute para")
+                        
+            elif (isinstance(parent_role,Substitute_para)):
+                if (str(rate) in ['10.0','10.1','10.4']):
+                    hours = earnings/rate
+                    lineitem.update_stepinfo('cba_rate',rate) 
+                    lineitem.update_stepinfo('hours',hours) 
+                    lineitem.update_stepinfo('role',"Substitute para")
+                    lineitem.set_payment_type("Contract salary") 
+        elif (obj == '52121'):                       #health and medical
+            lineitem.set_payment_type("Health and Medical")
+        return
+        
+class Substitute_teacher(Substitutes):
     
     def __init__(self, person, role_name):
         Substitutes.__init__(self, person, role_name) 
+        return
         
-class Substitute_para(Role):
+class Substitute_para(Substitutes):
     
     def __init__(self, person, role_name):
         Substitutes.__init__(self, person, role_name)
+        return
         
-class Coach(Role):
+class Appendix_B(Role):
     
     def __init__(self, person, role_name):
-        Role.__init__(self, person, role_name) 
+        Role.__init__(self, person, role_name)
+        
+        self.schedule_B = {
+            '2013-2014' :
+                {1:19306., 2:21123., 3:22941., 4:24758., 5:26576., 6:28393., 7:30211., 8:32028.,9:33846., 10:39496},
+            '2014-2015' :
+                {1:19306., 2:21123., 3:22941., 4:24758., 5:26576., 6:28393., 7:30211., 8:32028.,9:33846., 10:39496},
+            '2015-2016' :
+                {1:19306., 2:21123., 3:22941., 4:24758., 5:26576., 6:28393., 7:30211., 8:32028.,9:33846., 10:39496},
+            '2016-2017' :
+                {1:19306., 2:21123., 3:22941., 4:24758., 5:26576., 6:28393., 7:30211., 8:32028.,9:33846., 10:39496},
+            '2017-2018' :
+                {1:19306., 2:21123., 3:22941., 4:24758., 5:26576., 6:28393., 7:30211., 8:32028.,9:33846., 10:39496},
+            '2018-2019' :
+                {1:19306., 2:21123., 3:22941., 4:24758., 5:26576., 6:28393., 7:30211., 8:32028.,9:33846., 10:39496},
+            '2019-2020' :
+                {1:19306., 2:21123., 3:22941., 4:24758., 5:26576., 6:28393., 7:30211., 8:32028.,9:33846., 10:39496},
+            '2020-2021' :
+                {1:19306., 2:21123., 3:22941., 4:24758., 5:26576., 6:28393., 7:30211., 8:32028.,9:33846., 10:39496},
+            '2021-2022' :
+                {1:19306., 2:21123., 3:22941., 4:24758., 5:26576., 6:28393., 7:30211., 8:32028.,9:33846., 10:39496}
+        }
+        
+        self.stipend_lookup = {}
+        
+        for syear in self.schedule_B.keys():
+            if syear not in self.stipend_lookup.keys():
+                self.stipend_lookup[syear] = {}
+            for pts in np.arange(6,13):
+                for step in self.schedule_B[syear].keys():
+                    for frac in [1.0,0.6]:
+                        stipend = 0.01*frac*pts*self.schedule_B[syear][step]
+                        if (step == 10):
+                            if (stipend > 0.0):
+                                stipend += 25.
+                            if (stipend > 999):
+                                stipend += 25.
+                            if (stipend > 1999):
+                                stipend += 25.
+                            if (stipend > 2999):
+                                stipend += 25.
+                        stipend = round(stipend,2)
+                        sstipend = str(stipend)
+                        if sstipend not in self.stipend_lookup[syear].keys():
+                            self.stipend_lookup[syear][sstipend] = {}
+                            self.stipend_lookup[syear][sstipend]['pts'] = pts
+                            self.stipend_lookup[syear][sstipend]['step'] = step
+                            self.stipend_lookup[syear][sstipend]['frac'] = frac
+        return
+            
+    def decode_earnings(self,lineitem):   
+        fund             = lineitem.get_fund()
+        obj              = lineitem.get_obj()
+        rate             = lineitem.get_rate()
+        acct             = lineitem.get_acct()
+        in_earnings      = lineitem.get_earnings()
+        earnings         = abs(in_earnings)                 #reverse sign if earnings are negative
+        
+        chk              = lineitem.get_parent_check()      #parent check object
+        ppo              = chk.get_parent_payperiod()       #parent payperiod object
+        syear            = ppo.get_school_year()            #school year for current lineitem
+        syseq            = ppo.get_school_year_seq()        #school year sequence number
+        parent_role      = ppo.get_parent_role()            #get parent role
+        person           = self.get_parent_person()  #parent person object
+        name             = person.get_name()                #name of person
+        
+        lineitem.set_payment_type("Other or unknown")
+        
+        if syear in self.stipend_lookup.keys():
+            searnings = str(earnings)
+        
+            if searnings in self.stipend_lookup[syear].keys():
+                lineitem.update_stepinfo('step',self.stipend_lookup[syear][searnings]['step'])
+                lineitem.update_stepinfo('pts',self.stipend_lookup[syear][searnings]['pts'])
+                lineitem.update_stepinfo('frac',self.stipend_lookup[syear][searnings]['frac'])
+                lineitem.set_payment_type("Coach/Advisor stipend")
+        return
+    
+    def get_schedule_B(self):
+        return(self.schedule_B)
+    
+    def get_step_10_increase(self):
+        return(self.step_10_increase)
+    
+    def get_point_values(self):
+        return(self.point_values)
+        
+class Coach(Appendix_B):
+    
+    def __init__(self, person, role_name):
+        Appendix_B.__init__(self, person, role_name)
+        
+        self.point_values = {}
+        for i in np.arange(6,13):
+            self.point_values[i] = 0
+        return
+    
+    def get_point_values(self):
+        return(self.point_values)
+            
+class Advisor(Appendix_B):
+    
+    def __init__(self, person, role_name):
+        Appendix_B.__init__(self, person, role_name)
+        return
