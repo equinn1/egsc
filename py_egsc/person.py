@@ -15,6 +15,17 @@ class Person():                                                #generic employee
     def get_roles(self):
         return(self.roles)
     
+    def print(self):
+        print(self.name,self.person_id,self.roles)
+        return
+    
+    def get_person_id(self):
+        return(self.person_id)
+        
+    def set_person_id(self,pid):
+        self.person_id = pid
+        return
+    
     def get_role(self,role_name):
         try:
             return(self.roles[role_name])

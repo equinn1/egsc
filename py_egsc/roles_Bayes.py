@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, date
+from pay_check import Pay_check, Check_lineitem
+from forecast import *
 import numpy as np
 import pandas as pd
 import copy as cp
@@ -12,8 +14,24 @@ class Role():                                                  #generic employee
         self.first_payperiod = None                            #earliest payperiod object for this role  
         self.first_school_year = None                          #school year of earliest payperiod object
         self.first_school_year_seq = None                      #school year sequence of earliest payperiod object
+        self.retirement_school_year = None                     #may retire in this school year
+        self.retirement_probability = None                     #probability of retiring in this school year
         self.empirical_priors = {}                             #priors for steps and/or job titles
         self.fte_empirical_priors = {}    
+        return
+    
+    def get_retirement_school_year(self):
+        return(self.retirement_school_year)
+    
+    def set_retirement_school_year(self,syear):
+        self.retirement_school_year = syear
+        return
+    
+    def get_retirement_probability(self):
+        return(self.retirement_probability)
+    
+    def set_retirement_probability(self,prob):
+        self.retirement_probability = prob
         return
     
     def get_role_name(self):                                   #return role name
@@ -91,6 +109,9 @@ class Role():                                                  #generic employee
     
     def get_first_school_year_seq(self):
         return(self.first_school_year_seq)                     #school year sequence of earliest payperiod object
+    
+    def compute_forecast(self,parm):                           #compute forecast placeholder
+        return
     
 ################################################################################################
     
@@ -201,6 +222,35 @@ class Teacher(Role):
     def set_cba_matrix_by_year(self, school_year,cba_matrix):
         self.cba_matrix[school_year] = cp.deepcopy(cba_matrix)
         return
+    
+    def get_cba_salary(self,stepcode):             #step code format is 'yyyy-yyyy-col-step'
+        syear = stepcode[:9]
+        w = stepcode[10:].split('-')
+        col = self.reverse_col_names[w[0]]
+        row = int(w[1])-1
+        sal = self.cba[syear][row,col]
+        return(sal)
+    
+    def get_next_salary_step(self,stepcode):             #step code format is 'yyyy-yyyy-col-step'
+        syear = stepcode[:9]
+        y2 = syear[5:]
+        y2a = str(int(y2)+1)
+        syear = y2 + '-' + y2a
+        w = stepcode[10:].split('-')
+        newcode=syear + '-' + w[0] + '-'
+        row = int(w[1]) + 1 
+        if (row >= 10):
+            row = 10
+        newcode += str(row)
+        return(newcode)
+    
+    def get_step_salary(self,stepcode):    
+        syear = stepcode[:9]
+        w = stepcode[10:].split('-')
+        col = self.reverse_col_names[w[0]]
+        row = int(w[1])-1
+        sal = self.cba[syear][row,col]
+        return(sal)
      
     def get_n_payments(self,i):
         return(n_payments[i])
@@ -449,6 +499,29 @@ class Teacher(Role):
             #lineitem.set_payment_type('Other or unknown')
             
         return
+    
+    def compute_forecast(self,parm):                        #compute next forecast one payperiod beyond this one
+        role    = parm['role']
+        fc_in   = parm['forecast']
+        if (fc_in.get_payment_type() == 'Contract salary'):   #contract salary forecast
+            fc = fc_in.make_copy()                            #deepcopy to create new forecast
+            fc.update_school_year()                           #advance school_year and school_year_seq
+            stepinfo = fc.get_stepinfo()                      #update stepinfo
+            stepcode = stepinfo['step']                       #get step code 'yyyy-yyyy-col-step'
+            if (fc_in.school_year != fc.school_year):         #update step if new school year
+                stepcode = self.get_next_salary_step(stepcode) #get step for next payperiod
+                stepinfo['step'] = stepcode                    #update stepcode in stepinfo
+            sal = self.get_cba_salary(stepcode)                #compute salary in next payperiod 
+            sal = round(sal,2)
+            fte = stepinfo['fte']                             #assume fte is the same
+            payments = stepinfo['payments']                   #assume number of payments is the same
+            amt = round(fte*sal/payments,2)                   #new earnings amount
+            fc.amt = amt                                      #update forecast object
+            stepinfo['salary'] = sal                          #update salary in stepinfo
+            fc.set_stepinfo(stepinfo)                         #put new stepinfo in forecast
+            return(fc)                                        #return new forecast
+        else:
+            return
         
 class Para(Role):
     

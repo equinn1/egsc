@@ -22,10 +22,10 @@ class Payperiod():                                #class for dates at end of pay
         next_payday = self.get_next_payday(check_date)                #first payday after check date 
         self.payday = next_payday                                     #save payday date
         if (next_payday == first_payday):                             #if first payday in fyear
-            self.fiscal_year_seq = 1.0                                #seq = 1
+            self.fiscal_year_seq = 1                                  #seq = 1
         else:
             tdelta = next_payday - first_payday                       #otherwise compute seq
-            self.fiscal_year_seq = 1 + tdelta.days/14                 #as days since first/14 + 1
+            self.fiscal_year_seq = int(1 + tdelta.days/14)            #as days since first/14 + 1
                                                                       #construct school year string
         syear = str(first_payday.year) + '-' +\
                 str(1+first_payday.year)
@@ -35,7 +35,7 @@ class Payperiod():                                #class for dates at end of pay
         else:
             self.school_year = str(first_payday.year) + '-' + str(first_payday.year + 1)
             
-        self.school_year_seq = self.fiscal_year_seq - 3         #compute school year sequence number
+        self.school_year_seq = int(self.fiscal_year_seq - 3)         #compute school year sequence number
         if (self.school_year_seq < 1):                   #fiscal year sequence 1,2,3 produce -2,-1,0
             self.school_year_seq += 26                   #convert to 24,25,26
 
@@ -102,6 +102,22 @@ class Payperiod():                                #class for dates at end of pay
         """Add a check to the check dictionary indexed by check number"""
         self.checks[check_number] = check
         return
+    
+    def get_next_school_year(self):
+        """Return the next school year"""
+        sy2 = int(self.school_year[5:])
+        nsyr = str(sy2) + '-' + str(sy2+1)
+        return(nsyr)
+    
+    def get_next_school_year_seq(self):
+        """Return the next payperiod as a dictionary with 'syear' and 'syseq'"""
+        syd = {'syear':self.school_year}
+        if (self.school_year_seq < 26):
+            syd['syseq'] = self.school_year_seq + 1
+        else:
+            syd['syear'] = self.get_next_school_year()
+            syd['syseq'] = 1
+        return(syd)
     
     def get_check(self,check_number):
         """Retrieve a check from the check dictionary by check number"""
