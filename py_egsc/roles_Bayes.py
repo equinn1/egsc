@@ -831,7 +831,7 @@ class Facilities(Role):
         except KeyError:
             print('Facilities - update_priors KeyError ',n,ppo.priors)
         return
-        
+    
     def decode_earnings(self,lineitem):
        
         fund             = lineitem.get_fund()
@@ -857,29 +857,23 @@ class Facilities(Role):
         min_sy = None
         min_job = None
         min_OT  = None
+    
+        stipend = parent_role.get_stipend()
+    
+        st = stipend[school_year]
+        for job in st.keys():
+            stp = st[job]
+            s = 80.0*26.0*rate
+            if (((stp - 1.0 < s) & (s < stp + 1.0)) | ((1.5*stp - 1.0 < s) & (s < 1.5*stp + 1.0))):
+                lineitem.set_payment_type(job)
+                return
        
         if ((earnings == 650.0) & (rate == 0.0)):
             lineitem.set_payment_type("Added stipend")
             return
         
-        elif ((1299.0 < rate*80*26) & (rate*80*26 < 1301.)):
-            lineitem.set_payment_type("Head custodian stipend - Elementary")
-            return
-        
-        elif ((1499.0 < rate*80*26) & (rate*80*26 < 1501.)):
-            lineitem.set_payment_type("Head custodian stipend - Middle School")
-            return
-              
-        elif ((2199.0 < rate*80*26) & (rate*80*26 < 2201.)):
-            lineitem.set_payment_type("Head custodian stipend - High School")
-            return
-              
-        elif ((2699.0 < rate*80*26) & (rate*80*26 < 2701.)):
-            lineitem.set_payment_type("Maintenance Foreman stipend")
-            return
-        
         else:
-            for sy in self.cba.keys():
+            for sy in parent_role.cba.keys():
                 for job in self.cba[sy].keys():
                     diff = abs(rate - self.cba[sy][job])
                     if (diff < mindiff):
@@ -935,7 +929,6 @@ class Facilities(Role):
                         
                                                    
         return
-    
     
     def set_initial_priors(self,ppo,probs=None):
         """Null Prior initialization for facilities"""
