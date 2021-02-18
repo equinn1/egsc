@@ -795,6 +795,12 @@ class Facilities(Role):
     def get_cba_matrix(self):
         return(self.cba)
     
+    def get_cba_steps(self):
+        return(self.cba_steps)
+    
+    def get_stipend(self):
+        return(self.stipend)
+    
     def get_rate_lookup(self):
         """Null get_rate_lookup function for facilities"""
         return
