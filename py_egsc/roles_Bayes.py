@@ -718,6 +718,76 @@ class Facilities(Role):
             '2013-2014': {0:18.3600, 2:26.0300, 2:12.7300, 3:18.2900, 4:27.7134, 5:33.3189}
             }
         
+        self.stipend = {
+            '2013-2014': {
+                        "Head custodian stipend - Elementary":        1154.84,
+                        "Head custodian stipend - Middle School":     1231.83,
+                        "Head custodian stipend - High School":       2001.73,
+                        "Maintenance Foreman stipend":                2466.56
+                        },
+            '2014-2015': {
+                        "Head custodian stipend - Elementary":        1174.94,
+                        "Head custodian stipend - Middle School":     1256.47,
+                        "Head custodian stipend - High School":       2041.76,
+                        "Maintenance Foreman stipend":                2515.89
+                        },
+            '2015-2016': {
+                        "Head custodian stipend - Elementary":        1300.00,
+                        "Head custodian stipend - Middle School":     1500.00,
+                        "Head custodian stipend - High School":       2200.00,
+                        "Maintenance Foreman stipend":                2700.00
+                        },
+            '2016-2017': {
+                        "Head custodian stipend - Elementary":        1300.00,
+                        "Head custodian stipend - Middle School":     1500.00,
+                        "Head custodian stipend - High School":       2200.00,
+                        "Maintenance Foreman stipend":                2700.00
+                        },
+            '2017-2018': {
+                        "Head custodian stipend - Elementary":        1300.00,
+                        "Head custodian stipend - Middle School":     1500.00,
+                        "Head custodian stipend - High School":       2200.00,
+                        "Maintenance Foreman stipend":                2700.00
+                        },
+            '2018-2019': {
+                        "Head custodian stipend - Elementary":        1300.00,
+                        "Head custodian stipend - Middle School":     1500.00,
+                        "Head custodian stipend - High School":       2200.00,
+                        "Maintenance Foreman stipend":                2700.00
+                        },
+            '2019-2020': {
+                        "Head custodian stipend - Elementary":        1300.00,
+                        "Head custodian stipend - Middle School":     1500.00,
+                        "Head custodian stipend - High School":       2200.00,
+                        "Maintenance Foreman stipend":                2700.00
+                        },
+            '2020-2021': {
+                        "Head custodian stipend - Elementary":        1300.00,
+                        "Head custodian stipend - Middle School":     1500.00,
+                        "Head custodian stipend - High School":       2200.00,
+                        "Maintenance Foreman stipend":                2700.00
+                        }
+                }
+        self.cba_steps = {
+            '2013-2014': {
+                        "Custodian": {
+                            0 : 12.48, 1 : 14.22, 2: 14.99, 3: 15.77, 4: 16.54, 5: 17.83}, 
+                        "Maintenance": {
+                            1 : 15.00, 2: 15.61, 3: 16.24, 4: 16.86, 5: 18.00}, 
+                        "Electrician": {
+                            1 : 21.09, 2: 22.20, 3: 23.30, 4: 24.42, 5: 25.52}
+            },
+            '2014-2015': {
+                        "Custodian": {
+                            0 : 12.73, 1 : 14.50, 2: 15.29, 3: 16.09, 4: 16.87, 5: 18.19}, 
+                        "Maintenance": {
+                            1 : 15.30, 2: 15.92, 3: 16.56, 4: 17.20, 5: 18.36}, 
+                        "Electrician": {
+                            1 : 21.51, 2: 22.64, 3: 23.77, 4: 24.91, 5: 26.03}
+            }
+        }
+
+        
         return
     
              #added stipend $650 November, 2018
@@ -781,7 +851,7 @@ class Facilities(Role):
         min_sy = None
         min_job = None
         min_OT  = None
-        
+       
         if ((earnings == 650.0) & (rate == 0.0)):
             lineitem.set_payment_type("Added stipend")
             return
