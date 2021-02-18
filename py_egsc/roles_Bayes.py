@@ -781,60 +781,81 @@ class Facilities(Role):
         min_sy = None
         min_job = None
         min_OT  = None
-            
-        for sy in self.cba.keys():
-            for job in self.cba[sy].keys():
-                diff = abs(rate - self.cba[sy][job])
-                if (diff < mindiff):
-                    mindiff = diff
-                    min_sy = sy
-                    min_job = job
-                    min_OT = False
-                diff = abs(rate - 1.5*self.cba[sy][job])
-                if (diff < mindiff):
-                    mindiff = diff
-                    min_sy = sy
-                    min_job = job
-                    min_OT = True
-            
-        cba_rate = self.cba[min_sy][min_job]
-        if (rate > 0.0):
-            hours = round(earnings/rate,4)
+        
+        if ((earnings == 650.0) & (rate == 0.0)):
+            lineitem.set_payment_type("Added stipend")
+            return
+        
+        elif ((1299.0 < rate*80*26) & (rate*80*26 < 1301.)):
+            lineitem.set_payment_type("Head custodian stipend - Elementary")
+            return
+        
+        elif ((1499.0 < rate*80*26) & (rate*80*26 < 1501.)):
+            lineitem.set_payment_type("Head custodian stipend - Middle School")
+            return
+              
+        elif ((2199.0 < rate*80*26) & (rate*80*26 < 2201.)):
+            lineitem.set_payment_type("Head custodian stipend - High School")
+            return
+              
+        elif ((2699.0 < rate*80*26) & (rate*80*26 < 2701.)):
+            lineitem.set_payment_type("Maintenance Foreman stipend")
+            return
+        
         else:
-            hours = None
+            for sy in self.cba.keys():
+                for job in self.cba[sy].keys():
+                    diff = abs(rate - self.cba[sy][job])
+                    if (diff < mindiff):
+                        mindiff = diff
+                        min_sy = sy
+                        min_job = job
+                        min_OT = False
+                    diff = abs(rate - 1.5*self.cba[sy][job])
+                    if (diff < mindiff):
+                        mindiff = diff
+                        min_sy = sy
+                        min_job = job
+                        min_OT = True
+            
+            cba_rate = self.cba[min_sy][min_job]
+            if (rate > 0.0):
+                hours = round(earnings/rate,4)
+            else:
+                hours = None
                 
-        if (mindiff < error_tolerance):
+            if (mindiff < error_tolerance):
 
-            lineitem.update_stepinfo('cba_rate',cba_rate) 
-            lineitem.update_stepinfo('hours',hours)    
-            lineitem.update_stepinfo('mindiff',round(mindiff,4))
-            lineitem.update_stepinfo('syear',min_sy)
-            lineitem.update_stepinfo('job',self.jobs[min_job])
-            lineitem.update_stepinfo('OT',min_OT)
-            lineitem.update_stepinfo('hours',hours)
-            lineitem.update_stepinfo('from_priors',False)
-            lineitem.set_payment_type("Contract salary")
-            self.update_priors(min_job,ppo)
-        else:                                                   #doesn't match, use priors
-            max_prob = 0.0
-            max_job  = None
-                
-            priors = ppo.get_priors()
-            for i in priors.keys():
-                if (priors[i] > max_prob):
-                    max_prob = priors[i]
-                    max_job  = i
-            prior_rate = self.cba[school_year][max_job]
-            if (max_prob > 0.9):
-                lineitem.update_stepinfo('cba_rate',rate)
-                lineitem.update_stepinfo('prior_rate',prior_rate) 
+                lineitem.update_stepinfo('cba_rate',cba_rate) 
+                lineitem.update_stepinfo('hours',hours)    
                 lineitem.update_stepinfo('mindiff',round(mindiff,4))
-                lineitem.update_stepinfo('syear',school_year)
-                lineitem.update_stepinfo('job',self.jobs[max_job])
-                if (hours is not None):
-                    lineitem.update_stepinfo('hours',hours)
-                lineitem.update_stepinfo('from_priors',True)
-                lineitem.set_payment_type("Other or unknown")
+                lineitem.update_stepinfo('syear',min_sy)
+                lineitem.update_stepinfo('job',self.jobs[min_job])
+                lineitem.update_stepinfo('OT',min_OT)
+                lineitem.update_stepinfo('hours',hours)
+                lineitem.update_stepinfo('from_priors',False)
+                lineitem.set_payment_type("Contract salary")
+                self.update_priors(min_job,ppo)
+            else:                                                   #doesn't match, use priors
+                max_prob = 0.0
+                max_job  = None
+                
+                priors = ppo.get_priors()
+                for i in priors.keys():
+                    if (priors[i] > max_prob):
+                        max_prob = priors[i]
+                        max_job  = i
+                prior_rate = self.cba[school_year][max_job]
+                if (max_prob > 0.9):
+                    lineitem.update_stepinfo('cba_rate',rate)
+                    lineitem.update_stepinfo('prior_rate',prior_rate) 
+                    lineitem.update_stepinfo('mindiff',round(mindiff,4))
+                    lineitem.update_stepinfo('syear',school_year)
+                    lineitem.update_stepinfo('job',self.jobs[max_job])
+                    if (hours is not None):
+                        lineitem.update_stepinfo('hours',hours)
+                    lineitem.update_stepinfo('from_priors',True)
+                    lineitem.set_payment_type("Other or unknown")
                         
                                                    
         return
