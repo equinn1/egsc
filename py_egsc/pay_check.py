@@ -82,7 +82,9 @@ class Check_lineitem():                                                       #c
                       16:'Professional Development and Training Services',17:'Class Overage/Weighting', \
                       18:'Stipend - mentors',19:'Coverage - other',20:'Professional Development and Training',  \
                       21:'Summer Pay',22:'Stipend - Athletic Officials',23:'Officials/Referees', \
-                      24:'nosuch',25:'Coach/Advisor stipend', \
+                      24:'nosuch',25:'Coach/Advisor stipend',26:'Added stipend', \
+                      27:'Head custodian stipend - Elementary',28:'Head custodian stipend - Middle School', \
+                      29:'Head custodian stipend - High School',30:'Maintenance Foreman stipend', \
                       99:'Other or unknown'}
         
         return
