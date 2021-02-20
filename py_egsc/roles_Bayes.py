@@ -704,93 +704,126 @@ class Facilities(Role):
         self.empirical_priors     = {0:2986./6952., 1:886./6952., 2:2323./6952., 3:757./6952., 4:1.0/6952., 5:1.0/6952.}
         self.fte_empirical_priors = {}
         
-        self.jobs = {0:'Maintenance',1:'Electrician',2:'Custodian I',3:'Custodian II', 4:'Maint Dir', 5:'Facility Dir'}
+        self.cba = {
+            '2013-2014':{
+                'Custodian':{0 : 12.48, 1 : 14.22, 2: 14.99, 3: 15.77, 4: 16.54, 5: 17.83},
+                'Maintenance':{1 : 15.00, 2: 15.61, 3: 16.24, 4: 16.86, 5: 18.00},
+                'Electrician':{1 : 21.09, 2: 22.20, 3: 23.30, 4: 24.42, 5: 25.52},
+                'Maint Dir':{1 : 27.7134},
+                'Facility Dir':{1 : 33.3189},
+                },
+            '2014-2015':{
+                'Custodian':{0 : 12.73, 1 : 14.50, 2: 15.29, 3: 16.09, 4: 16.87, 5: 18.19},
+                'Maintenance':{1 : 15.30, 2: 15.92, 3: 16.56, 4: 17.20, 5: 18.36},
+                'Electrician':{1 : 21.51, 2: 22.64, 3: 23.77, 4: 24.91, 5: 26.03},
+                'Maint Dir':{1 : 27.7134},
+                'Facility Dir':{1 : 33.9853},
+                },
+            '2015-2016':{
+                'Custodian':{0 : 13.240, 5: 18.5500},
+                'Maintenance':{1 : 18.7300},
+                'Electrician':{1 : 26.5506},
+                'Maint Dir':{1 : 28.4062},
+                'Facility Dir':{1 : 34.8350},
+                },
+            '2016-2017':{
+                'Custodian':{0 : 13.6364, 5: 18.9249},
+                'Maintenance':{1 : 19.1017},
+                'Electrician':{1 : 27.0816},
+                'Maint Dir':{1 : 28.9743},
+                'Facility Dir':{1 : 35.1833},
+                },
+            '2017-2018':{
+                'Custodian':{0 : 13.6364, 5: 18.9249},
+                'Maintenance':{1 : 19.1017},
+                'Electrician':{1 : 27.0816},
+                'Maint Dir':{1 : 28.9743},
+                'Facility Dir':{1 : 35.8869},
+                },
+            '2018-2019':{
+                'Custodian':{0 : 14.0455, 5: 19.3034},
+                'Maintenance':{1 : 19.4837},
+                'Electrician':{1 : 27.6232},
+                'Maint Dir':{1 : 29.5500},
+                'Facility Dir':{1 : 36.6046},
+                },
+            '2019-2020':{
+                'Custodian':{0 : 14.4318, 5: 19.6895},
+                'Maintenance':{1 : 19.8700},
+                'Electrician':{1 : 28.1762},
+                'Maint Dir':{1 : 30.6000},
+                'Facility Dir':{1 : 37.3368},
+                },
+            '2020-2021':{
+                'Custodian':{0 : 14.8300, 5: 20.0800},
+                'Maintenance':{1 : 20.2710},
+                'Electrician':{1 : 28.7397},
+                'Maint Dir':{1 : 30.6000},
+                'Facility Dir':{1 : 37.3368},
+                },
+            }
         
         #salary is 2080*rate
         
-        self.cba = {
-            '2019-2020': {0:20.2710, 1:28.7397, 2:14.8286, 3:20.0833, 4:30.6000, 5:37.3368},
-            '2018-2019': {0:19.8734, 1:28.1762, 2:14.4318, 3:19.6895, 4:29.5500, 5:36.6046},
-            '2017-2018': {0:19.4837, 1:27.6232, 2:14.0455, 3:19.3034, 4:29.5500, 5:35.8869},
-            '2016-2017': {0:19.1017, 1:27.0816, 2:13.6364, 3:18.9249, 4:28.9743, 5:35.1833},
-            '2015-2016': {0:18.7300, 1:26.5506, 2:13.2400, 3:18.5500, 4:28.4062, 5:34.8350},
-            '2014-2015': {0:18.3600, 1:26.0300, 2:12.7300, 3:18.1900, 4:27.7134, 5:33.9853},
-            '2013-2014': {0:18.3600, 2:26.0300, 2:12.7300, 3:18.2900, 4:27.7134, 5:33.3189}
-            }
-        
         self.stipend = {
             '2013-2014': {
+                        "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1154.84,
                         "Head custodian stipend - Middle School":     1231.83,
                         "Head custodian stipend - High School":       2001.73,
-                        "Maintenance Foreman stipend":                2466.56
+                        "Maintenance Foreman stipend":                2466.56,
                         },
             '2014-2015': {
-                        "Head custodian stipend - Elementary":        1174.94,
+                        "Facilities stipend":                         650.00,
+                        "Head custodian stipend - Elementary":        1177.94,
                         "Head custodian stipend - Middle School":     1256.47,
                         "Head custodian stipend - High School":       2041.76,
                         "Maintenance Foreman stipend":                2515.89
                         },
             '2015-2016': {
+                        "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00
+                        "Maintenance Foreman stipend":                2700.00,
                         },
             '2016-2017': {
+                        "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00
+                        "Maintenance Foreman stipend":                2700.00,
                         },
             '2017-2018': {
+                        "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00
+                        "Maintenance Foreman stipend":                2700.00,
                         },
             '2018-2019': {
+                        "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00
+                        "Maintenance Foreman stipend":                2700.00,
                         },
             '2019-2020': {
+                        "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00
+                        "Maintenance Foreman stipend":                2700.00,
                         },
             '2020-2021': {
+                        "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00
+                        "Maintenance Foreman stipend":                2700.00,
                         }
                 }
-        self.cba_steps = {
-            '2013-2014': {
-                        "Custodian": {
-                            0 : 12.48, 1 : 14.22, 2: 14.99, 3: 15.77, 4: 16.54, 5: 17.83}, 
-                        "Maintenance": {
-                            1 : 15.00, 2: 15.61, 3: 16.24, 4: 16.86, 5: 18.00}, 
-                        "Electrician": {
-                            1 : 21.09, 2: 22.20, 3: 23.30, 4: 24.42, 5: 25.52}
-            },
-            '2014-2015': {
-                        "Custodian": {
-                            0 : 12.73, 1 : 14.50, 2: 15.29, 3: 16.09, 4: 16.87, 5: 18.19}, 
-                        "Maintenance": {
-                            1 : 15.30, 2: 15.92, 3: 16.56, 4: 17.20, 5: 18.36}, 
-                        "Electrician": {
-                            1 : 21.51, 2: 22.64, 3: 23.77, 4: 24.91, 5: 26.03}
-            }
-        }
-
-        
         return
-    
-             #added stipend $650 November, 2018
         
     def get_cba_matrix(self):
         return(self.cba)
@@ -846,90 +879,113 @@ class Facilities(Role):
         school_year      = ppo.get_school_year()            #school year for current lineitem
         syseq            = ppo.get_school_year_seq()        #school year sequence number
         parent_role      = ppo.get_parent_role()            #get parent role
+        role_name        = parent_role.get_role_name()
         rate_lookup      = self.get_rate_lookup()
         person           = self.get_parent_person()  #parent person object
         name             = person.get_name()                #name of person
         payment_type     = 'Other or unknown'
         
         error_tolerance  = 3
-            
-        mindiff = 1000.0
+        
+        mindiff = 1000.0                                   #look up salary in cba table
         min_sy = None
         min_job = None
         min_OT  = None
-    
-        stipend = parent_role.get_stipend()
-    
-        st = stipend[school_year]
-        for job in st.keys():
-            stp = st[job]
-            s = 80.0*26.0*rate
-            if (((stp - 1.0 < s) & (s < stp + 1.0)) | ((1.5*stp - 1.0 < s) & (s < 1.5*stp + 1.0))):
-                lineitem.set_payment_type(job)
-                return
-       
-        if ((earnings == 650.0) & (rate == 0.0)):
-            lineitem.set_payment_type("Added stipend")
+        
+        if (rate > 0.0):
+            hours = round(earnings/rate,2)
+        else:
+            hours = None
+        
+        cbat = self.cba[school_year]                                   
+        for job in cbat.keys():
+            for step in cbat[job].keys():
+                for fact in [1.0,1.5]:
+                    diff = abs(rate - fact*cbat[job][step])
+                    if (diff < mindiff):
+                        mindiff = diff
+                        min_job = job
+                        min_step = step
+                        min_fact = fact
+                        
+             
+                
+        if (mindiff < error_tolerance):
+            lineitem.update_stepinfo('cba_rate',cbat[min_job][min_step]) 
+            lineitem.update_stepinfo('hours',hours)    
+            lineitem.update_stepinfo('mindiff',round(mindiff,4))
+            lineitem.update_stepinfo('job',min_job)
+            lineitem.update_stepinfo('step',min_step)
+            
+            lineitem.update_stepinfo('from_priors',False)
+            if (min_fact == 1.0):
+                lineitem.set_payment_type("Contract salary")
+                lineitem.update_stepinfo('OT',False)
+            else:
+                lineitem.set_payment_type("Overtime")
+                lineitem.update_stepinfo('OT',True)
+            #self.update_priors(min_job,ppo)
             return
         
-        else:
-            for sy in parent_role.cba.keys():
-                for job in self.cba[sy].keys():
-                    diff = abs(rate - self.cba[sy][job])
-                    if (diff < mindiff):
-                        mindiff = diff
-                        min_sy = sy
-                        min_job = job
-                        min_OT = False
-                    diff = abs(rate - 1.5*self.cba[sy][job])
-                    if (diff < mindiff):
-                        mindiff = diff
-                        min_sy = sy
-                        min_job = job
-                        min_OT = True
+        else:   
+            mindiff   = 1000.0                                   #check stipends
+            min_ptype = None
+            min_fact  = None
             
-            cba_rate = self.cba[min_sy][min_job]
-            if (rate > 0.0):
-                hours = round(earnings/rate,4)
-            else:
-                hours = None
-                
+            #cbas = self.stipend[school_year]
+            
+            for syear in self.stipend.keys():
+                cbas = self.stipend[syear]
+                for ptype in cbas.keys():
+                    for fact in [1.0,1.5]:
+                        sp = fact*cbas[ptype]
+                        if (rate > 0.0):
+                            diff = abs(80.0*26.0*rate - sp)
+                            if (diff < mindiff):
+                                mindiff = diff
+                                min_ptype = ptype
+                                min_fact = fact
+                            diff = abs(26.0*rate - sp)
+                            if (diff < mindiff):
+                                mindiff = diff
+                                min_ptype = ptype
+                                min_fact = fact
+                        else:
+                            diff = abs(earnings*26.0*80.0 - sp)
+                            if (diff < mindiff):
+                                mindiff = diff
+                                min_ptype = ptype
+                                min_fact = fact
+                            diff = abs(earnings - sp)
+                            if (diff < mindiff):
+                                mindiff = diff
+                                min_ptype = ptype
+                                min_fact = fact
+                    
             if (mindiff < error_tolerance):
-
-                lineitem.update_stepinfo('cba_rate',cba_rate) 
-                lineitem.update_stepinfo('hours',hours)    
-                lineitem.update_stepinfo('mindiff',round(mindiff,4))
-                lineitem.update_stepinfo('syear',min_sy)
-                lineitem.update_stepinfo('job',self.jobs[min_job])
-                lineitem.update_stepinfo('OT',min_OT)
-                lineitem.update_stepinfo('hours',hours)
-                lineitem.update_stepinfo('from_priors',False)
-                lineitem.set_payment_type("Contract salary")
-                self.update_priors(min_job,ppo)
-            else:                                                   #doesn't match, use priors
-                max_prob = 0.0
-                max_job  = None
-                
-                priors = ppo.get_priors()
-                for i in priors.keys():
-                    if (priors[i] > max_prob):
-                        max_prob = priors[i]
-                        max_job  = i
-                prior_rate = self.cba[school_year][max_job]
-                if (max_prob > 0.9):
-                    lineitem.update_stepinfo('cba_rate',rate)
-                    lineitem.update_stepinfo('prior_rate',prior_rate) 
-                    lineitem.update_stepinfo('mindiff',round(mindiff,4))
-                    lineitem.update_stepinfo('syear',school_year)
-                    lineitem.update_stepinfo('job',self.jobs[max_job])
-                    if (hours is not None):
-                        lineitem.update_stepinfo('hours',hours)
-                    lineitem.update_stepinfo('from_priors',True)
-                    lineitem.set_payment_type("Other or unknown")
-                        
-                                                   
+                if (min_fact == 1.5):
+                    min_ptype = min_ptype + ' - OT'
+                lineitem.set_payment_type(min_ptype)
+                return
+            
+            elif ((rate == 0.0) & (obj == '20430')):
+                lineitem.set_payment_type("Obj 20430") 
+                return  
+            
+            elif (rate in [10.0,10.1,10.5]):    # & (role_name == 'CUST PT')):
+                lineitem.update_stepinfo('hours',round(earnings/rate,2))
+                lineitem.set_payment_type("Custodian part time") 
+                return  
+            
+            elif (chk.get_date() == date(2018,1,5)):    # mysterious 1/5/2018 payments
+                lineitem.set_payment_type("Mysterious 1/5/2018") 
+                return  
+            
+            else:
+                lineitem.set_payment_type("Other or unknown") 
+                return
         return
-    
+
     def set_initial_priors(self,ppo,probs=None):
         """Null Prior initialization for facilities"""
         return

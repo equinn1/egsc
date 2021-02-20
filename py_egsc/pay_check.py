@@ -71,7 +71,7 @@ class Check_lineitem():                                                       #c
         self.stepinfo  = {}                     #stepinfo
         self.simplex   = None                   #simplex for forecasts
 
-        self.payment_type = 99
+        self.payment_type = None
         self.payment_types = {1:'Contract salary',2:'One-time stipend',3:'Class coverage', \
                       4:'Contract rate',5:'Detention coverage', \
                       6:'Contract salary adjustment', \
@@ -85,6 +85,10 @@ class Check_lineitem():                                                       #c
                       24:'nosuch',25:'Coach/Advisor stipend',26:'Added stipend', \
                       27:'Head custodian stipend - Elementary',28:'Head custodian stipend - Middle School', \
                       29:'Head custodian stipend - High School',30:'Maintenance Foreman stipend', \
+                      31:'Head custodian stipend - Elementary - OT',32:'Head custodian stipend - Middle School - OT', \
+                      33:'Head custodian stipend - High School - OT',34:'Maintenance Foreman stipend - OT', \
+                      35:'Overtime',36:'Facilities stipend',37:'Facilities stipend - OT',38:'Obj 20430', \
+                      39:'Custodian part time',40:'Mysterious 1/5/2018', \
                       99:'Other or unknown'}
         
         return
@@ -168,7 +172,7 @@ class Check_lineitem():                                                       #c
             if (new_type == self.payment_types[key]):
                 valid_type = True
         if not valid_type:
-            print("Valid payment_type codes are ",new_type,self.payment_types)
+            print("Invalid payment type ",new_type," Valid payment_type codes are ",new_type,self.payment_types)
         else:
             self.payment_type = new_type
         return
