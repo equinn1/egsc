@@ -613,9 +613,8 @@ class Para(Role):
         obj              = lineitem.get_obj()
         rate             = lineitem.get_rate()
         acct             = lineitem.get_acct()
-        in_earnings      = lineitem.get_earnings()
-        earnings         = abs(in_earnings)                 #reverse sign if earnings are negative
-        
+        earnings         = lineitem.get_earnings()
+        #earnings        = abs(earnings)                 #reverse sign if earnings are negative
         chk              = lineitem.get_parent_check()      #parent check object
         ppo              = chk.get_parent_payperiod()       #parent payperiod object
         school_year      = ppo.get_school_year()            #school year for current lineitem
@@ -634,7 +633,7 @@ class Para(Role):
             job = rate_lookup[school_year][str(rate)]['job']
             mindiff = rate_lookup[school_year][str(rate)]['mindiff']
             hours = None
-            if (rate > 0.0):            
+            if (abs(rate)>0.0):            
                 hours = earnings/rate
             self.update_priors(job,step,ppo)
             lineitem.update_stepinfo('step',school_year + '-' + str(step+1))        #code is:  yyyy-yyyy-step
@@ -705,66 +704,68 @@ class Facilities(Role):
         self.fte_empirical_priors = {}
         
         self.cba = {
-            '2013-2014':{
-                'Custodian':{0 : 12.48, 1 : 14.22, 2: 14.99, 3: 15.77, 4: 16.54, 5: 17.83},
-                'Maintenance':{1 : 15.00, 2: 15.61, 3: 16.24, 4: 16.86, 5: 18.00},
-                'Electrician':{1 : 21.09, 2: 22.20, 3: 23.30, 4: 24.42, 5: 25.52},
-                'Maint Dir':{1 : 27.7134},
-                'Facility Dir':{1 : 33.3189},
+            'Custodian':{
+                '2013-2014': {'2013-2014-0': 12.48, '2013-2014-1': 14.22, '2013-2014-2': 14.99,
+                              '2013-2014-3': 15.77, '2013-2014-4': 16.54, '2013-2014-5': 17.83},
+                '2014-2015': {'2014-2015-0': 12.73, '2014-2015-1': 14.50, '2014-2015-2': 15.29,
+                              '2014-2015-3': 16.09, '2014-2015-4': 16.87, '2014-2015-5': 18.19},
+                '2015-2016': {'2015-2016-0': 13.24, '2015-2016-5': 18.5500},
+                '2016-2017': {'2016-2017-0': 14.0455, '2016-2017-5': 18.93034},
+                '2017-2018': {'2017-2018-0': 14.0455, '2017-2018-5': 19.3034},
+                '2018-2019': {'2018-2019-0': 14.4300, '2018-2019-5': 19.6900},
+                '2019-2020': {'2019-2020-0': 14.4300, '2019-2020-5': 19.6900},
+                '2020-2021': {'2020-2021-0': 14.8300, '2020-2021-5': 20.0800}
                 },
-            '2014-2015':{
-                'Custodian':{0 : 12.73, 1 : 14.50, 2: 15.29, 3: 16.09, 4: 16.87, 5: 18.19},
-                'Maintenance':{1 : 15.30, 2: 15.92, 3: 16.56, 4: 17.20, 5: 18.36},
-                'Electrician':{1 : 21.51, 2: 22.64, 3: 23.77, 4: 24.91, 5: 26.03},
-                'Maint Dir':{1 : 27.7134},
-                'Facility Dir':{1 : 33.9853},
+            'Maintenance':{
+                '2013-2014': {'2013-2014-1': 15.00, '2013-2014-2': 15.61, '2013-2014-3':16.24,
+                              '2013-2014-4': 16.86, '2013-2014-5': 18.00},
+                '2014-2015': {'2014-2015-1': 15.30, '2014-2015-2': 15.92, '2014-2015-3':16.56,
+                              '2014-2015-4': 17.20, '2014-2015-5': 18.36},
+                '2015-2016': {'2015-2016-1': 18.7300},
+                '2016-2017': {'2016-2017-1': 19.1017},
+                '2017-2018': {'2017-2018-1': 19.4837},
+                '2018-2019': {'2018-2019-1': 19.8700},
+                '2019-2020': {'2019-2020-1': 19.8700},
+                '2020-2021': {'2020-2021-1': 20.2710}
                 },
-            '2015-2016':{
-                'Custodian':{0 : 13.240, 5: 18.5500},
-                'Maintenance':{1 : 18.7300},
-                'Electrician':{1 : 26.5506},
-                'Maint Dir':{1 : 28.4062},
-                'Facility Dir':{1 : 34.8350},
+            'Electrician':{
+                '2013-2014': {'2013-2014-1': 21.09, '2013-2014-2': 22.20, '2013-2014-3': 23.30,
+                              '2013-2014-4': 24.42, '2013-2014-5': 25.52},
+                '2014-2015': {'2014-2015-1': 21.51, '2014-2015-2': 22.64, '2014-2015-3': 23.77, 
+                              '2014-2015-4': 24.91, '2014-2015-5': 26.03},
+                '2015-2016': {'2015-2016-1': 26.5506},
+                '2016-2017': {'2016-2017-1': 27.0816},
+                '2017-2018': {'2017-2018-1': 27.6232},
+                '2018-2019': {'2018-2019-1': 27.6232},
+                '2019-2020': {'2019-2020-1': 28.1762},
+                '2020-2021': {'2020-2021-1': 28.7397}
                 },
-            '2016-2017':{
-                'Custodian':{0 : 13.6364, 5: 18.9249},
-                'Maintenance':{1 : 19.1017},
-                'Electrician':{1 : 27.0816},
-                'Maint Dir':{1 : 28.9743},
-                'Facility Dir':{1 : 35.1833},
+            'Maint Dir':  {
+                '2013-2014': {'2013-2014-1': 27.7134},
+                '2014-2015': {'2014-2015-1': 27.7134},
+                '2015-2016': {'2015-2016-1': 28.4062},
+                '2016-2017': {'2016-2017-1': 28.9743},
+                '2017-2018': {'2017-2018-1': 29.5500},
+                '2018-2019': {'2018-2019-1': 29.5500},
+                '2019-2020': {'2019-2020-1': 30.6000},
+                '2020-2021': {'2020-2021-1': 30.6000}
                 },
-            '2017-2018':{
-                'Custodian':{0 : 13.6364, 5: 18.9249},
-                'Maintenance':{1 : 19.1017},
-                'Electrician':{1 : 27.0816},
-                'Maint Dir':{1 : 28.9743},
-                'Facility Dir':{1 : 35.8869},
-                },
-            '2018-2019':{
-                'Custodian':{0 : 14.0455, 5: 19.3034},
-                'Maintenance':{1 : 19.4837},
-                'Electrician':{1 : 27.6232},
-                'Maint Dir':{1 : 29.5500},
-                'Facility Dir':{1 : 36.6046},
-                },
-            '2019-2020':{
-                'Custodian':{0 : 14.4318, 5: 19.6895},
-                'Maintenance':{1 : 19.8700},
-                'Electrician':{1 : 28.1762},
-                'Maint Dir':{1 : 30.6000},
-                'Facility Dir':{1 : 37.3368},
-                },
-            '2020-2021':{
-                'Custodian':{0 : 14.8300, 5: 20.0800},
-                'Maintenance':{1 : 20.2710},
-                'Electrician':{1 : 28.7397},
-                'Maint Dir':{1 : 30.6000},
-                'Facility Dir':{1 : 37.3368},
-                },
+            'Facility Dir': {
+                '2013-2014': {'2013-2014-1': 33.3189},
+                '2014-2015': {'2014-2015-1': 33.9853},
+                '2015-2016': {'2015-2016-1': 34.8350},
+                '2016-2017': {'2016-2017-1': 35.1833},
+                '2017-2018': {'2017-2018-1': 36.6046},
+                '2018-2019': {'2018-2019-1': 36.6046},
+                '2019-2020': {'2019-2020-1': 36.6046},
+                '2020-2021': {'2020-2021-1': 37.3368}
+                }
             }
         
-        #salary is 2080*rate
-        
+        self.roles = {'CUSTODIAN': 'Custodian', 'CUST PT': 'Custodian', 
+                      'DIR MAINT': 'Maint Dir', 'ELECTRICAN': 'Electrician', 
+                      'MAINTENANC': 'Maintenance', 'FACILTY DR': 'Facility Dir'}
+           
         self.stipend = {
             '2013-2014': {
                         "Facilities stipend":                          650.00,
@@ -871,8 +872,7 @@ class Facilities(Role):
         obj              = lineitem.get_obj()
         rate             = lineitem.get_rate()
         acct             = lineitem.get_acct()
-        in_earnings      = lineitem.get_earnings()
-        earnings         = abs(in_earnings)                 #reverse sign if earnings are negative
+        earnings         = lineitem.get_earnings()
         
         chk              = lineitem.get_parent_check()      #parent check object
         ppo              = chk.get_parent_payperiod()       #parent payperiod object
@@ -886,9 +886,10 @@ class Facilities(Role):
         payment_type     = 'Other or unknown'
         
         error_tolerance  = 3
+        rate_tolerance   = 0.01
         
         mindiff = 1000.0                                   #look up salary in cba table
-        min_sy = None
+        min_syr = None
         min_job = None
         min_OT  = None
         
@@ -896,22 +897,24 @@ class Facilities(Role):
             hours = round(earnings/rate,2)
         else:
             hours = None
-        
-        cbat = self.cba[school_year]                                   
-        for job in cbat.keys():
-            for step in cbat[job].keys():
+            
+        jobname = self.roles[role_name]
+        cbat = self.cba[jobname]                                   
+        for syr in cbat.keys():
+            for step in cbat[syr].keys():
                 for fact in [1.0,1.5]:
-                    diff = abs(rate - fact*cbat[job][step])
+                    diff = abs(rate - fact*cbat[syr][step])
                     if (diff < mindiff):
                         mindiff = diff
-                        min_job = job
+                        min_syr = syr
+                        min_job = jobname
                         min_step = step
                         min_fact = fact
                         
              
                 
-        if (mindiff < error_tolerance):
-            lineitem.update_stepinfo('cba_rate',cbat[min_job][min_step]) 
+        if (mindiff < rate_tolerance):
+            lineitem.update_stepinfo('cba_rate',cbat[min_syr][min_step]) 
             lineitem.update_stepinfo('hours',hours)    
             lineitem.update_stepinfo('mindiff',round(mindiff,4))
             lineitem.update_stepinfo('job',min_job)
@@ -1001,6 +1004,11 @@ class Maintenance(Facilities):
         Facilities.__init__(self, person, role_name)
 
 class Electrician(Facilities):
+    
+    def __init__(self, person, role_name):
+        Facilities.__init__(self, person, role_name)
+        
+class Custodian_PT(Facilities):
     
     def __init__(self, person, role_name):
         Facilities.__init__(self, person, role_name)
