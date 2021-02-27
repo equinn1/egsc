@@ -705,60 +705,60 @@ class Facilities(Role):
         
         self.cba = {
             'Custodian':{
-                '2013-2014': {'2013-2014-0': 12.48, '2013-2014-1': 14.22, '2013-2014-2': 14.99,
-                              '2013-2014-3': 15.77, '2013-2014-4': 16.54, '2013-2014-5': 17.83},
-                '2014-2015': {'2014-2015-0': 12.73, '2014-2015-1': 14.50, '2014-2015-2': 15.29,
-                              '2014-2015-3': 16.09, '2014-2015-4': 16.87, '2014-2015-5': 18.19},
-                '2015-2016': {'2015-2016-0': 13.24, '2015-2016-5': 18.5500},
-                '2016-2017': {'2016-2017-0': 14.0455, '2016-2017-5': 18.93034},
-                '2017-2018': {'2017-2018-0': 14.0455, '2017-2018-5': 19.3034},
-                '2018-2019': {'2018-2019-0': 14.4300, '2018-2019-5': 19.6900},
-                '2019-2020': {'2019-2020-0': 14.4300, '2019-2020-5': 19.6900},
-                '2020-2021': {'2020-2021-0': 14.8300, '2020-2021-5': 20.0800}
+                '2014': {'2014-0': 12.48, '2014-1': 14.22, '2014-2': 14.99,
+                              '2014-3': 15.77, '2014-4': 16.54, '2014-5': 17.83},
+                '2015': {'2015-0': 12.73, '2015-1': 14.50, '2015-2': 15.29,
+                              '2015-3': 16.09, '2015-4': 16.87, '2015-5': 18.19},
+                '2016': {'2016-0': 13.24, '2016-5': 18.5500},
+                '2017': {'2017-0': 13.6364, '2017-5': 18.9249},
+                '2018': {'2018-0': 14.0455, '2018-5': 19.3034},
+                '2019': {'2019-0': 14.4300, '2019-5': 19.3034},
+                '2020': {'2020-0': 14.4300, '2020-5': 19.6900},
+                '2021': {'2021-0': 14.8300, '2021-5': 20.0800}
                 },
             'Maintenance':{
-                '2013-2014': {'2013-2014-1': 15.00, '2013-2014-2': 15.61, '2013-2014-3':16.24,
-                              '2013-2014-4': 16.86, '2013-2014-5': 18.00},
-                '2014-2015': {'2014-2015-1': 15.30, '2014-2015-2': 15.92, '2014-2015-3':16.56,
-                              '2014-2015-4': 17.20, '2014-2015-5': 18.36},
-                '2015-2016': {'2015-2016-1': 18.7300},
-                '2016-2017': {'2016-2017-1': 19.1017},
-                '2017-2018': {'2017-2018-1': 19.4837},
-                '2018-2019': {'2018-2019-1': 19.8700},
-                '2019-2020': {'2019-2020-1': 19.8700},
-                '2020-2021': {'2020-2021-1': 20.2710}
+                '2014': {'2014-1': 15.00, '2014-2': 15.61, '2014-3':16.24,
+                              '2014-4': 16.86, '2014-5': 18.00},
+                '2015': {'2015-1': 15.30, '2015-2': 15.92, '2015-3':16.56,
+                              '2015-4': 17.20, '2015-5': 18.36},
+                '2016': {'2016-1': 18.7300},
+                '2017': {'2017-1': 19.1017},
+                '2018': {'2018-1': 19.4837},
+                '2019': {'2019-1': 19.8700},
+                '2020': {'2020-1': 19.8700},
+                '2021': {'2021-1': 20.2710}
                 },
             'Electrician':{
-                '2013-2014': {'2013-2014-1': 21.09, '2013-2014-2': 22.20, '2013-2014-3': 23.30,
-                              '2013-2014-4': 24.42, '2013-2014-5': 25.52},
-                '2014-2015': {'2014-2015-1': 21.51, '2014-2015-2': 22.64, '2014-2015-3': 23.77, 
-                              '2014-2015-4': 24.91, '2014-2015-5': 26.03},
-                '2015-2016': {'2015-2016-1': 26.5506},
-                '2016-2017': {'2016-2017-1': 27.0816},
-                '2017-2018': {'2017-2018-1': 27.6232},
-                '2018-2019': {'2018-2019-1': 27.6232},
-                '2019-2020': {'2019-2020-1': 28.1762},
-                '2020-2021': {'2020-2021-1': 28.7397}
+                '2014': {'2014-1': 21.09, '2014-2': 22.20, '2014-3': 23.30,
+                              '2014-4': 24.42, '2014-5': 25.52},
+                '2015': {'2015-1': 21.51, '2015-2': 22.64, '2015-3': 23.77, 
+                              '2015-4': 24.91, '2015-5': 26.03},
+                '2016': {'2016-1': 26.5506},
+                '2017': {'2017-1': 27.0816},
+                '2018': {'2018-1': 27.6232},
+                '2019': {'2019-1': 27.6232},
+                '2020': {'2020-1': 28.1762},
+                '2021': {'2021-1': 28.7397}
                 },
             'Maint Dir':  {
-                '2013-2014': {'2013-2014-1': 27.7134},
-                '2014-2015': {'2014-2015-1': 27.7134},
-                '2015-2016': {'2015-2016-1': 28.4062},
-                '2016-2017': {'2016-2017-1': 28.9743},
-                '2017-2018': {'2017-2018-1': 29.5500},
-                '2018-2019': {'2018-2019-1': 29.5500},
-                '2019-2020': {'2019-2020-1': 30.6000},
-                '2020-2021': {'2020-2021-1': 30.6000}
+                '2014': {'2014-1': 27.7134},
+                '2015': {'2015-1': 27.7134},
+                '2016': {'2016-1': 28.4062},
+                '2017': {'2017-1': 28.9743},
+                '2018': {'2018-1': 29.5500},
+                '2019': {'2019-1': 29.5500},
+                '2020': {'2020-1': 30.6000},
+                '2021': {'2021-1': 30.6000}
                 },
             'Facility Dir': {
-                '2013-2014': {'2013-2014-1': 33.3189},
-                '2014-2015': {'2014-2015-1': 33.9853},
-                '2015-2016': {'2015-2016-1': 34.8350},
-                '2016-2017': {'2016-2017-1': 35.1833},
-                '2017-2018': {'2017-2018-1': 36.6046},
-                '2018-2019': {'2018-2019-1': 36.6046},
-                '2019-2020': {'2019-2020-1': 36.6046},
-                '2020-2021': {'2020-2021-1': 37.3368}
+                '2014': {'2014-1': 33.3189},
+                '2015': {'2015-1': 33.9853},
+                '2016': {'2016-1': 34.8350},
+                '2017': {'2017-1': 35.1833},
+                '2018': {'2018-1': 36.6046},
+                '2019': {'2019-1': 36.6046},
+                '2020': {'2020-1': 36.6046},
+                '2021': {'2021-1': 37.3368}
                 }
             }
         
@@ -767,56 +767,56 @@ class Facilities(Role):
                       'MAINTENANC': 'Maintenance', 'FACILTY DR': 'Facility Dir'}
            
         self.stipend = {
-            '2013-2014': {
+            '2014': {
                         "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1154.84,
                         "Head custodian stipend - Middle School":     1231.83,
                         "Head custodian stipend - High School":       2001.73,
                         "Maintenance Foreman stipend":                2466.56,
                         },
-            '2014-2015': {
+            '2015': {
                         "Facilities stipend":                         650.00,
                         "Head custodian stipend - Elementary":        1177.94,
                         "Head custodian stipend - Middle School":     1256.47,
                         "Head custodian stipend - High School":       2041.76,
                         "Maintenance Foreman stipend":                2515.89
                         },
-            '2015-2016': {
+            '2016': {
                         "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
                         "Maintenance Foreman stipend":                2700.00,
                         },
-            '2016-2017': {
+            '2017': {
                         "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
                         "Maintenance Foreman stipend":                2700.00,
                         },
-            '2017-2018': {
+            '2018': {
                         "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
                         "Maintenance Foreman stipend":                2700.00,
                         },
-            '2018-2019': {
+            '2019': {
                         "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
                         "Maintenance Foreman stipend":                2700.00,
                         },
-            '2019-2020': {
+            '2020': {
                         "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
                         "Maintenance Foreman stipend":                2700.00,
                         },
-            '2020-2021': {
+            '2021': {
                         "Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
@@ -877,7 +877,8 @@ class Facilities(Role):
         chk              = lineitem.get_parent_check()      #parent check object
         ppo              = chk.get_parent_payperiod()       #parent payperiod object
         school_year      = ppo.get_school_year()            #school year for current lineitem
-        syseq            = ppo.get_school_year_seq()        #school year sequence number
+        fiscal_year      = str(ppo.get_fiscal_year())       #fiscal year for current lineitem
+        fyseq            = ppo.get_fiscal_year_seq()        #fiscal year sequence number
         parent_role      = ppo.get_parent_role()            #get parent role
         role_name        = parent_role.get_role_name()
         rate_lookup      = self.get_rate_lookup()
@@ -900,13 +901,13 @@ class Facilities(Role):
             
         jobname = self.roles[role_name]
         cbat = self.cba[jobname]                                   
-        for syr in cbat.keys():
-            for step in cbat[syr].keys():
+        for fyr in cbat.keys():
+            for step in cbat[fyr].keys():
                 for fact in [1.0,1.5]:
-                    diff = abs(rate - fact*cbat[syr][step])
+                    diff = abs(rate - fact*cbat[fyr][step])
                     if (diff < mindiff):
                         mindiff = diff
-                        min_syr = syr
+                        min_fyr = fyr
                         min_job = jobname
                         min_step = step
                         min_fact = fact
@@ -914,7 +915,15 @@ class Facilities(Role):
              
                 
         if (mindiff < rate_tolerance):
-            lineitem.update_stepinfo('cba_rate',cbat[min_syr][min_step]) 
+            lineitem.update_stepinfo('MUNIS_rate',cbat[min_fyr][min_step]) 
+            cba_step_number = min_step[5:]
+            if ((fiscal_year > '2015') & (jobname != 'Custodian')):
+                cba_step_number = '1'
+            elif (cba_step_number == '2'):
+                cba_step_number = '0'
+            cba_step = fiscal_year + '-' + cba_step_number
+            lineitem.update_stepinfo('cba_rate',cbat[fiscal_year][cba_step]) 
+            lineitem.update_stepinfo('cba_step', cba_step)
             lineitem.update_stepinfo('hours',hours)    
             lineitem.update_stepinfo('mindiff',round(mindiff,4))
             lineitem.update_stepinfo('job',min_job)
@@ -937,8 +946,8 @@ class Facilities(Role):
             
             #cbas = self.stipend[school_year]
             
-            for syear in self.stipend.keys():
-                cbas = self.stipend[syear]
+            for fyear in self.stipend.keys():
+                cbas = self.stipend[fyear]
                 for ptype in cbas.keys():
                     for fact in [1.0,1.5]:
                         sp = fact*cbas[ptype]
