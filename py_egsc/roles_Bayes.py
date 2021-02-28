@@ -576,10 +576,56 @@ class Para(Role):
         
         self.jobs = {0:'Office',1:'Central',2:'Para'}
         
+        self.job_codes = {'Office':0,'Central':1,'Para':2}
+        
         with open('../../finance_subcommittee/para_rate_lookup_1_18_2021.pkl', 'rb') as handle:
             self.para_rate_lookup =  pickle.load(handle)
             
         return
+    
+    def update_cba(self,base_year,new_year,office,central,para):
+        self.cba[new_year] = {}
+        factors = [office,central,para]
+        for j in [0,1,2]:
+            self.cba[new_year][j] = {}
+            for k in self.cba[base_year][j].keys():
+                self.cba[new_year][j][k] = round(self.cba[base_year][j][k]*factors[j],4)
+        return
+    
+    def get_cba(self):
+        return(self.cba)
+
+    def get_rate(self,job,step):
+        try:
+            jc = self.job_codes[job]
+        except KeyError:
+            print('No code for job ',job)
+            return
+        step_number = int(step[len(step)-1])
+        school_year = step[:9]
+        try:
+            rate = self.cba[school_year][jc][step_number]
+        except KeyError:
+            print('No rate for ',job,step)
+            return
+        return(rate)
+        
+    
+    def get_future_step(self,current_step,years_ahead):
+        words = current_step.split('-')
+        year1 = int(words[0]) + years_ahead
+        newstep = str(year1) + '-' + str(year1 + 1) + '-' + str(min(7,int(words[2])+years_ahead))
+        return(newstep)
+    
+    def get_job_code(self,job):
+        try:
+            return(self.job_codes[job])
+        except KeyError:
+            print('No code for job ',job)
+            return
+    
+    def get_para_rate_lookup(self):
+        return(self.para_rate_lookup)
     
     def set_empirical_priors(self,prior):
         try:
@@ -587,9 +633,6 @@ class Para(Role):
         except KeyError:
             print('Para - set empirical priors KeyError ',prior)
         return
-    
-    def get_rate_lookup(self):
-        return(self.para_rate_lookup)
         
     def update_priors(self,job,n,ppo):
         """update_priors(param,value) updates the priors for param given value"""
@@ -614,7 +657,6 @@ class Para(Role):
         rate             = lineitem.get_rate()
         acct             = lineitem.get_acct()
         earnings         = lineitem.get_earnings()
-        #earnings        = abs(earnings)                 #reverse sign if earnings are negative
         chk              = lineitem.get_parent_check()      #parent check object
         ppo              = chk.get_parent_payperiod()       #parent payperiod object
         school_year      = ppo.get_school_year()            #school year for current lineitem
