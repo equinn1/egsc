@@ -205,6 +205,7 @@ class Teacher(Role):
         
         with open('../../finance_subcommittee/rate_lookup_.pkl', 'rb') as handle:
             self.rate_lookup =  pickle.load(handle)
+        #self.rate_lookup['2020-2021'] = {}
             
         with open('../../finance_subcommittee/empirical_priors_1_14_2021.pkl', 'rb') as handle:
             empirical_probabilities = pickle.load(handle)
@@ -315,7 +316,8 @@ class Teacher(Role):
        
         fund             = lineitem.get_fund()
         obj              = lineitem.get_obj()
-        rate             = float(lineitem.get_rate())
+        rate             = lineitem.get_rate()
+        strate           = str(rate)
         acct             = lineitem.get_acct()
         ftekey           = lineitem.get_ftekey()
         in_earnings      = lineitem.get_earnings()
@@ -409,14 +411,14 @@ class Teacher(Role):
             lineitem.set_payment_type("Officials/Referees")
 
         
-        elif rate in rate_lookup[school_year].keys():
+        elif strate in rate_lookup[school_year].keys():
             
             lineitem.set_payment_type("Contract salary")
             
-            col = rate_lookup[school_year][rate]['col']
+            col = rate_lookup[school_year][strate]['col']
             self.update_priors('col',col,ppo)
             
-            row = rate_lookup[school_year][rate]['row']
+            row = rate_lookup[school_year][strate]['row']
             self.update_priors('row',row,ppo)
             
             lineitem.update_stepinfo('step',school_year + '-' + self.col_names[col] + \
@@ -543,7 +545,8 @@ class Para(Role):
                     '2016-2017':{7:19.14, 6:18.06, 5:17.17, 4:16.69, 3:16.19, 2:15.84, 1:15.35},
                     '2017-2018':{7:19.14, 6:18.06, 5:17.17, 4:16.69, 3:16.19, 2:15.84, 1:15.35},
                     '2018-2019':{7:19.52, 6:18.42, 5:17.51, 4:17.02, 3:16.51, 2:16.16, 1:15.66},
-                    '2019-2020':{7:19.91, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97}
+                    '2019-2020':{7:19.91, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
+                    '2020-2021':{7:19.91, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97}
                 },
                 'Office':{
                     '2013-2014':{7:21.51, 6:20.15, 5:19.19, 4:18.25, 3:17.27, 2:16.59, 1:16.11},
@@ -552,7 +555,8 @@ class Para(Role):
                     '2016-2017':{7:22.83, 6:20.96, 5:19.97, 4:18.99, 3:17.97, 2:17.26, 1:16.76},
                     '2017-2018':{7:22.83, 6:20.96, 5:19.97, 4:18.99, 3:17.97, 2:17.26, 1:16.76},
                     '2018-2019':{7:23.29, 6:21.38, 5:20.37, 4:19.37, 3:18.33, 2:17.61, 1:17.10},
-                    '2019-2020':{7:23.76, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44}
+                    '2019-2020':{7:23.76, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
+                    '2020-2021':{7:23.76, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44}
                 },
                 'Central':{
                     '2013-2014':{7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64},
@@ -561,11 +565,13 @@ class Para(Role):
                     '2016-2017':{7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43},
                     '2017-2018':{7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43},
                     '2018-2019':{7:27.13, 6:25.12, 5:24.09, 4:23.10, 3:22.07, 2:21.35, 1:20.84},
-                    '2019-2020':{7:27.67, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26}
+                    '2019-2020':{7:27.67, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26},
+                    '2020-2021':{7:27.67, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26}
                 }
         }
         
         self.jobs = {0:'Para',1:'Office',2:'Central'}
+        self.job_code = {'Para':0,'Office':1,'Central':2}
         #with open('../../finance_subcommittee/para_rate_lookup_1_18_2021.pkl', 'rb') as handle:
         #    self.para_rate_lookup =  pickle.load(handle)
             
@@ -620,15 +626,20 @@ class Para(Role):
     def update_priors(self,job,n,ppo):
         """update_priors(param,value) updates the priors for param given value"""
         try:
-            for i in ppo.priors[job].keys():
-                ppo.priors[job][i] = 0.5*ppo.priors[job][i]
+            job_code = self.job_code[job]
         except KeyError:
-            print('Para - update_priors KeyError ',job,n,ppo.priors)
+            print('Para - update priors - job code lookup error',job,n)
             return
         try:
-            ppo.priors[job][n] += 0.5
+            for i in ppo.priors[job_code].keys():
+                ppo.priors[job_code][i] = 0.5*ppo.priors[job][i]
         except KeyError:
-            print('Para - update_priors KeyError ',param,n,ppo.priors)
+            print('Para - update_priors KeyError ',job,job_code,n,ppo.priors)
+            return
+        try:
+            ppo.priors[job_code][n] += 0.5
+        except KeyError:
+            print('Para - update observed prior KeyError ',param,n,ppo.priors)
         return
         
     #get step, hours for paras, office, and central office
@@ -741,8 +752,9 @@ class Facilities(Role):
     
     def __init__(self, person, role_name):
         Role.__init__(self, person, role_name)
+                
+        self.empirical_priors     = {0:1/6., 1:1/6., 2:1/6., 3:1/6., 4:1/6., 5:1/6.}
         
-        self.empirical_priors     = {0:2986./6952., 1:886./6952., 2:2323./6952., 3:757./6952., 4:1.0/6952., 5:1.0/6952.}
         self.fte_empirical_priors = {}
         
         self.cba = {
@@ -797,48 +809,67 @@ class Facilities(Role):
                 '2015': {'2015-1': 33.9853},
                 '2016': {'2016-1': 34.8350},
                 '2017': {'2017-1': 35.1833},
-                '2018': {'2018-1': 36.6046},
+                '2018': {'2018-1': 35.8869},
                 '2019': {'2019-1': 36.6046},
                 '2020': {'2020-1': 36.6046},
                 '2021': {'2021-1': 37.3368}
+                },
+            'Custodian PT':  {
+                '2014': {'2014-1': 10.0000},
+                '2015': {'2015-1': 10.0000},
+                '2016': {'2016-1': 10.0000},
+                '2017': {'2017-1': 10.0000,'2017-2': 10.1000},
+                '2018': {'2018-1': 10.0000,'2018-2': 10.1000},
+                '2019': {'2019-1': 14.0500},
+                '2020': {'2020-1': 14.0500},
+                '2021': {'2021-1': 14.0500}
                 }
             }
         
-        self.roles = {'CUSTODIAN': 'Custodian', 'CUST PT': 'Custodian', 
+        self.roles = {'CUSTODIAN': 'Custodian', 'CUST PT': 'Custodian PT', 
                       'DIR MAINT': 'Maint Dir', 'ELECTRICAN': 'Electrician', 
                       'MAINTENANC': 'Maintenance', 'FACILTY DR': 'Facility Dir'}
+        
+        self.prior_jobs = {0:'Custodian',1:'Maintenance',2:'Electrician',
+                           3:'Maint Dir',4:'Facility Dir',5:'Custodian PT'}
+        
+        self.role_codes = {'CUSTODIAN':0, 'MAINTENANC':1, 'ELECTRICAN':2, 'DIR MAINT':3, 
+                         'FACILTY DR':4, 'CUST PT':5}
+        
+        self.jobs_prior = {'Custodian':0, 'Maintenance':1, 'Electrician':2,
+                           'Maint Dir':3, 'Facility Dir':4, 'Custodian PT':5}
            
         self.stipend = {
             '2014': {
-                        "Facilities stipend":                          650.00,
+                        #"Facilities stipend":                          650.00,   no general stipend this year
                         "Head custodian stipend - Elementary":        1154.84,
                         "Head custodian stipend - Middle School":     1231.83,
                         "Head custodian stipend - High School":       2001.73,
                         "Maintenance Foreman stipend":                2466.56,
                         },
             '2015': {
-                        "Facilities stipend":                         650.00,
+                        #"Facilities stipend":                         650.00,
                         "Head custodian stipend - Elementary":        1177.94,
                         "Head custodian stipend - Middle School":     1256.47,
                         "Head custodian stipend - High School":       2041.76,
                         "Maintenance Foreman stipend":                2515.89
                         },
             '2016': {
-                        "Facilities stipend":                          650.00,
+                        #"Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
                         "Maintenance Foreman stipend":                2700.00,
                         },
             '2017': {
-                        "Facilities stipend":                          650.00,
+                        #"Facilities stipend":                          650.00,
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
                         "Maintenance Foreman stipend":                2700.00,
                         },
             '2018': {
-                        "Facilities stipend":                          650.00,
+                        "Facilities stipend":                          650.00,   #just in case
                         "Head custodian stipend - Elementary":        1300.00,
                         "Head custodian stipend - Middle School":     1500.00,
                         "Head custodian stipend - High School":       2200.00,
@@ -893,21 +924,6 @@ class Facilities(Role):
     def get_empirical_priors(self):
         return(self.empirical_priors)
     
-            
-    def update_priors(self,n,ppo):
-        """update_priors(param,value) updates the priors for param given value"""
-        try:
-            for i in ppo.priors.keys():
-                ppo.priors[i] = 0.5*ppo.priors[i]
-        except KeyError:
-            print('Facilities - update_priors KeyError ',n,ppo.priors)
-            return
-        try:
-            ppo.priors[n] += 0.5
-        except KeyError:
-            print('Facilities - update_priors KeyError ',n,ppo.priors)
-        return
-    
     def decode_earnings(self,lineitem):
        
         fund             = lineitem.get_fund()
@@ -929,7 +945,7 @@ class Facilities(Role):
         payment_type     = 'Other or unknown'
         
         error_tolerance  = 3
-        rate_tolerance   = 0.01
+        rate_tolerance   = 0.03
         
         mindiff = 1000.0                                   #look up salary in cba table
         min_syr = None
@@ -978,45 +994,44 @@ class Facilities(Role):
             else:
                 lineitem.set_payment_type("Overtime")
                 lineitem.update_stepinfo('OT',True)
-            #self.update_priors(min_job,ppo)
+            self.update_priors(min_job,ppo)
             return
         
         else:   
-            mindiff   = 1000.0                                   #check stipends
+            mindiff   = 1000.0                                     #check stipends
             min_ptype = None
             min_fact  = None
             
-            #cbas = self.stipend[school_year]
-            
-            for fyear in self.stipend.keys():
-                cbas = self.stipend[fyear]
-                for ptype in cbas.keys():
-                    for fact in [1.0,1.5]:
-                        sp = fact*cbas[ptype]
-                        if (rate > 0.0):
-                            diff = abs(80.0*26.0*rate - sp)
-                            if (diff < mindiff):
-                                mindiff = diff
+            for fyear in self.stipend.keys():                      #search through stipend table by year
+                cbas = self.stipend[fyear]                         #stipend for this fiscal year
+                for ptype in cbas.keys():                          #search through person types in table
+                    for fact in [1.0,1.5]:                         #try straight time and time-and-a-half rates
+                        sp = fact*cbas[ptype]                      #factor times stipend 
+                        if (rate > 0.0):                           #if rate is not zero, use it to check
+                            diff = abs(80.0*26.0*rate - sp)        #stipend - 80*26*hourly_rate
+                            if (diff < mindiff):                   #is this the best fit so far?
+                                mindiff = diff                     #if so, save the difference, ptype, and fact
                                 min_ptype = ptype
                                 min_fact = fact
-                            diff = abs(26.0*rate - sp)
-                            if (diff < mindiff):
-                                mindiff = diff
+                            diff = abs(26.0*rate - sp)             #another possibility to check - is it payperiod rate?
+                            if (diff < mindiff):                   #is this the best fit yet?
+                                mindiff = diff                     #if so save diff, ptype, fact
                                 min_ptype = ptype
                                 min_fact = fact
-                        else:
-                            diff = abs(earnings*26.0*80.0 - sp)
-                            if (diff < mindiff):
-                                mindiff = diff
+                        else:                                      #if rate=0.0, try using earnings
+                            diff = abs(earnings*26.0*80.0 - sp)   #I think this should be earnings*26.0!!!!
+                            #diff = abs(earnings*26.0 - sp)         #changed 3/3/2021
+                            if (diff < mindiff):                   #is this the best so far?
+                                mindiff = diff                     #if so save diff, ptype, fact
                                 min_ptype = ptype
                                 min_fact = fact
-                            diff = abs(earnings - sp)
-                            if (diff < mindiff):
-                                mindiff = diff
+                            diff = abs(earnings - sp)              #another possibility - earnings is whole stipend
+                            if (diff < mindiff):                   #is this the best fit so far?
+                                mindiff = diff                     #if so save diff, ptype, fact
                                 min_ptype = ptype
                                 min_fact = fact
-                    
-            if (mindiff < error_tolerance):
+                                
+            if (mindiff < error_tolerance):                       #did we find an acceptably close fit?
                 if (min_fact == 1.5):
                     min_ptype = min_ptype + ' - OT'
                 lineitem.set_payment_type(min_ptype)
@@ -1026,11 +1041,6 @@ class Facilities(Role):
                 lineitem.set_payment_type("Obj 20430") 
                 return  
             
-            elif (rate in [10.0,10.1,10.5]):    # & (role_name == 'CUST PT')):
-                lineitem.update_stepinfo('hours',round(earnings/rate,2))
-                lineitem.set_payment_type("Custodian part time") 
-                return  
-            
             elif (chk.get_date() == date(2018,1,5)):    # mysterious 1/5/2018 payments
                 lineitem.set_payment_type("Mysterious 1/5/2018") 
                 return  
@@ -1038,6 +1048,27 @@ class Facilities(Role):
             else:
                 lineitem.set_payment_type("Other or unknown") 
                 return
+        return
+    
+                
+    def update_priors(self,jobname,ppo):
+        """update_priors(param,value) updates the priors for param given value"""
+            
+        try:
+            n = self.jobs_prior[jobname]
+        except KeyError:
+            print('Facilities - jobname key error: ',jobname)
+            
+        try:
+            for i in ppo.priors.keys():
+                ppo.priors[i] = 0.5*ppo.priors[i]
+        except KeyError:
+            print('Facilities - update_priors KeyError ',n,ppo.priors)
+            return
+        try:
+            ppo.priors[n] += 0.5
+        except KeyError:
+            print('Facilities - update_priors KeyError ',n,ppo.priors)
         return
 
     def set_initial_priors(self,ppo,probs=None):
