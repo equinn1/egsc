@@ -827,6 +827,7 @@ class Facilities(Role):
             }
         
         self.roles = {'CUSTODIAN': 'Custodian', 'CUST PT': 'Custodian PT', 
+                      "CUST>'09": 'Custodian',"MAINT>'07": 'Maintenance', "CUST<'09": 'Custodian',
                       'DIR MAINT': 'Maint Dir', 'ELECTRICAN': 'Electrician', 
                       'MAINTENANC': 'Maintenance', 'FACILTY DR': 'Facility Dir'}
         
@@ -834,7 +835,7 @@ class Facilities(Role):
                            3:'Maint Dir',4:'Facility Dir',5:'Custodian PT'}
         
         self.role_codes = {'CUSTODIAN':0, 'MAINTENANC':1, 'ELECTRICAN':2, 'DIR MAINT':3, 
-                         'FACILTY DR':4, 'CUST PT':5}
+                         'FACILTY DR':4, 'CUST PT':5, "CUST>'09":0, "CUST<'09": 0, "MAINT>'07":1}
         
         self.jobs_prior = {'Custodian':0, 'Maintenance':1, 'Electrician':2,
                            'Maint Dir':3, 'Facility Dir':4, 'Custodian PT':5}
