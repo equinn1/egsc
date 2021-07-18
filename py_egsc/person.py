@@ -7,10 +7,16 @@ class Person():                                                #generic employee
         self.name = name                                       #name
         self.person_id = None                                  #unique identifier
         self.roles = {}                                        #roles
+        self.EYOB = None                                       #estimated year of birth
+        self.gender = None                                     #gender 'M','F'
         return
     
     def get_name(self):                                        #return name of person
         return(self.name)
+    
+    def set_name(self,name):                                   #name change if necessary
+        self.name = name
+        return
     
     def get_roles(self):
         return(self.roles)
@@ -24,6 +30,20 @@ class Person():                                                #generic employee
         
     def set_person_id(self,pid):
         self.person_id = pid
+        return
+    
+    def get_EYOB(self):
+        return(self.EYOB)
+        
+    def set_EYOB(self,EYOB):
+        self.EYOB = EYOB
+        return
+    
+    def get_gender(self):
+        return(self.gender)
+        
+    def set_gender(self,gender):
+        self.gender = gender
         return
     
     def get_role(self,role_name):

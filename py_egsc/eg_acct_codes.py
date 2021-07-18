@@ -342,3 +342,7 @@ class EG_acct_codes():
         """Returns dictionary of account codes."""
         return(self.EG_account_codes)
     
+    def get_eg_acct_codes6(self):
+        """Returns dictionary of 6-digit account codes."""
+        return(self.EG_account_codes6)
+    
