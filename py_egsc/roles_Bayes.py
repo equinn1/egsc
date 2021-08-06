@@ -37,6 +37,9 @@ class Role():                                                  #generic employee
     def get_role_name(self):                                   #return role name
         return(self.role_name)
     
+    def get_role_class(self):                                  #return role class
+        return(self.__class__.__name__)
+    
     def get_parent_person(self):                               #return parent person
         return(self.parent_person)
     
@@ -110,8 +113,11 @@ class Role():                                                  #generic employee
     def get_first_school_year_seq(self):
         return(self.first_school_year_seq)                     #school year sequence of earliest payperiod object
     
-    def compute_forecast(self,parm):                           #compute forecast placeholder
+    def compute_forecast(self,fc,pmt):                         #compute forecast generic
+        """Generic compute_forecast routine - does nothing"""
+        print('compute forecast - Role version')
         return
+    
     
 ################################################################################################
     
@@ -123,7 +129,7 @@ class Teacher(Role):
         self.FTE_fractions    = {0:1.0, 1:1/2., 2:1/10., 3:1/5., 4:4/5., 5:3/10., 6:2/5.,\
             7:3/5., 8:1/20., 9:1/3., 10:2/3., 11:1/4., 12:3/4.,13:1/6., 14:5/6., 15:1/7., 16:2/7.,\
             17:3/7., 18:4/7.,19:5/7., 20:6/7., 21:1/8., 22:3/8., 23:5/8., 24:7/8., 25:1/9., 26:2/9.,\
-            27:4/9., 28:5/9., 29:7/9., 30:8/9., 31:7/10., 32:9/10.} 
+            27:4/9., 28:5/9., 29:7/9., 30:8/9., 31:7/10., 32:9/10., 33:3/20.} 
         self.n_payments = {0:26, 1:21}
         self.col_names ={0:'B',1:'B+30',2:'M',3:'M+30',4:'M2/CAGS',5:'D'}
         self.reverse_col_names ={'B':0,'B+30':1,'M':2,'M+30':3,'M2/CAGS':4,'D':5}
@@ -175,24 +181,16 @@ class Teacher(Role):
             [70866.54, 72581.16, 73614.42, 74260.08, 74284.56, 75014.88],
             [76318.44, 78034.08, 79065.30, 79736.46, 80152.62, 80465.76],
             [83932.74, 85822.80, 86959.08, 87698.58, 88153.50, 88498.26]])         
-                                #FY2022 (2021-2022) 2.25% increase, don't round to dollar
-        self.cba['2021-2022'] = np.array([
-            [44908.38, 46664.71, 47720.18, 48409.57, 48831.96, 49151.10],
-            [48807.97, 50562.22, 51617.68, 52303.94, 52727.38, 53050.69],
-            [52749.28, 54502.48, 55560.03, 56246.29, 56669.73, 56989.92],
-            [56690.59, 58443.79, 59499.25, 60187.60, 60611.04, 60933.31],
-            [60663.98, 62386.14, 63445.78, 64131.00, 64554.43, 64875.66],
-            [64575.29, 66329.53, 67387.09, 68074.39, 68499.91, 68816.97],
-            [68517.64, 70273.97, 71327.35, 72015.70, 72439.14, 72761.41],
-            [72461.04, 74214.24, 75270.74, 75930.93, 75955.96, 76702.71],
-            [78035.60, 79789.85, 80844.27, 81530.53, 81956.05, 82276.24],
-            [85821.23, 87753.81, 88915.66, 89671.80, 90136.95, 90489.47]])         
+                                #FY2022 (2021-2022) same as FY2021
+        self.cba['2021-2022'] = self.cba['2020-2021'].copy()          
                                 #FY2023 (2022-2023) same as FY2022
         self.cba['2022-2023'] = self.cba['2021-2022'].copy()        
-                                #FY2024 (2023-2024) 2% increase, don't round to dollar
-        self.cba['2023-2024'] = np.around(1.02*self.cba['2022-2023'].copy(),2)        
-                                #FY2025 (2024-2025) 2.25% increase, don't round to dollar
-        self.cba['2024-2025'] = np.around(1.0225*self.cba['2023-2024'].copy(),2)        
+                                #FY2024 (2023-2024) same as FY2023
+        self.cba['2023-2024'] = self.cba['2022-2023'].copy()        
+                                #FY2025 (2024-2025) same as FY2024
+        self.cba['2024-2025'] = self.cba['2023-2024'].copy()   
+                                #FY2026 (2025-2026) same as FY2025
+        self.cba['2025-2026'] = self.cba['2024-2025'].copy()   
                                 #FY2015: back out 2.5% increase from FY2016, round to dollar
         self.cba['2014-2015'] = np.around(self.cba['2015-2016'].copy()/1.025,0) 
                                 #FY2014: back out 2% increase from FY2015, round to dollar
@@ -224,6 +222,20 @@ class Teacher(Role):
         self.cba_matrix[school_year] = cp.deepcopy(cba_matrix)
         return
     
+    def reset_cba_matrix(self):
+        """Reset cba matrix after 2020-2021 school year to be the same as 2020-2021"""
+        self.cba['2021-2022'] = self.cba['2020-2021'].copy()          
+        self.cba['2022-2023'] = self.cba['2021-2022'].copy()        
+        self.cba['2023-2024'] = self.cba['2022-2023'].copy()        
+        self.cba['2024-2025'] = self.cba['2023-2024'].copy()   
+        self.cba['2025-2026'] = self.cba['2024-2025'].copy()  
+        self.cba['2026-2027'] = self.cba['2025-2026'].copy()  
+        self.cba['2027-2028'] = self.cba['2026-2027'].copy()  
+        
+    def modify_cba_matrix(self,syear,factor):
+        self.cba[syear] = factor*self.cba[syear]
+        return
+    
     def get_cba_salary(self,stepcode):             #step code format is 'yyyy-yyyy-col-step'
         syear = stepcode[:9]
         w = stepcode[10:].split('-')
@@ -244,6 +256,36 @@ class Teacher(Role):
             row = 10
         newcode += str(row)
         return(newcode)
+    
+    def xget_salary_for_year(self,stepcode,syear,factor):       #step code format is 'yyyy-yyyy-col-step'
+        """ returns salary for future year, possibly with step changes and salary increases"""
+        salary = self.get_step_salary(stepcode)
+        school_year = int(syear[0:4])
+        words = stepcode.split('-')
+        sal_year = int(words[0])                                  
+        sal_col  = words[2]
+        sal_step = int(words[3])
+        new_step = min(sal_step + school_year - sal_year,10)
+        new_base_stepcode = words[0] + '-' + words[1] + '-' + words[2] + '-' + str(new_step)
+        new_step_salary = self.get_step_salary(new_base_stepcode) 
+        new_sal = round(factor*new_step_salary,2)
+        new_step = min(sal_step + school_year - sal_year,10)
+        new_stepcode = str(school_year) + '-' + str(school_year+1) + '-' + sal_col + '-' + str(new_step)
+        return((new_stepcode,new_sal))
+    
+    def get_salary_for_year(self,stepcode,syear):       #step code format is 'yyyy-yyyy-col-step'
+        """ returns salary for future year, possibly with step changes"""
+        salary = self.get_step_salary(stepcode)
+        school_year = int(syear[0:4])
+        words = stepcode.split('-')
+        sal_year = int(words[0])                                  
+        sal_col  = words[2]
+        sal_step = int(words[3])
+        new_step = min(sal_step + school_year - sal_year,10)
+        new_stepcode = syear + '-' + words[2] + '-' + str(new_step)
+        new_sal = self.get_step_salary(new_stepcode) 
+        new_stepcode = str(school_year) + '-' + str(school_year+1) + '-' + sal_col + '-' + str(new_step)
+        return((new_stepcode,new_sal))
     
     def get_step_salary(self,stepcode):    
         syear = stepcode[:9]
@@ -502,28 +544,45 @@ class Teacher(Role):
             
         return
     
-    def compute_forecast(self,parm):                        #compute next forecast one payperiod beyond this one
-        role    = parm['role']
-        fc_in   = parm['forecast']
-        if (fc_in.get_payment_type() == 'Contract salary'):   #contract salary forecast
-            fc = fc_in.make_copy()                            #deepcopy to create new forecast
-            fc.update_school_year()                           #advance school_year and school_year_seq
-            stepinfo = fc.get_stepinfo()                      #update stepinfo
-            stepcode = stepinfo['step']                       #get step code 'yyyy-yyyy-col-step'
-            if (fc_in.school_year != fc.school_year):         #update step if new school year
-                stepcode = self.get_next_salary_step(stepcode) #get step for next payperiod
-                stepinfo['step'] = stepcode                    #update stepcode in stepinfo
-            sal = self.get_cba_salary(stepcode)                #compute salary in next payperiod 
-            sal = round(sal,2)
-            fte = stepinfo['fte']                             #assume fte is the same
-            payments = stepinfo['payments']                   #assume number of payments is the same
-            amt = round(fte*sal/payments,2)                   #new earnings amount
-            fc.amt = amt                                      #update forecast object
-            stepinfo['salary'] = sal                          #update salary in stepinfo
-            fc.set_stepinfo(stepinfo)                         #put new stepinfo in forecast
-            return(fc)                                        #return new forecast
+        
+    def compute_forecast(self,fc,pmt):                       
+        """compute_forecast - Teacher version"""
+        payment_type = pmt.get_payment_type()
+        if (payment_type == 'Contract salary'):
+            base_year = fc.get_base_school_year()
+            syseq = pmt.get_school_year_seq()
+            pmt_earnings = pmt.get_earnings()
+            stepinfo = pmt.get_stepinfo()
+            factors  = fc.get_factors()['Teacher']
+            self.reset_cba_matrix()
+            for sy in factors.keys():
+                self.modify_cba_matrix(sy,factors[sy])
+            forecast_years    = fc.get_forecast_years()
+            for year in forecast_years:
+                new_stepinfo = {}
+                for key in stepinfo.keys():
+                    new_stepinfo[key] = stepinfo[key]
+                earnings = pmt_earnings                  #default if not step info
+                if 'step' in stepinfo.keys():
+                    stepcode = stepinfo['step']
+                    new_salary = self.get_salary_for_year(stepcode,year)
+                    new_stepinfo['step'] = new_salary[0]
+                    new_stepinfo['salary'] = round(new_salary[1],2)
+                    if (('payments' in stepinfo.keys()) & ('fte' in stepinfo.keys())):
+                        n_payments = stepinfo['payments']
+                        fte = stepinfo['fte']
+                        if (syseq <= n_payments):
+                            earnings = round(fte*new_salary[1]/n_payments,2)
+                        else:
+                            earnings = 0.0
+                    fpmt = Forecast_payment(fc,pmt,year,syseq,earnings,new_stepinfo)
+                    fc.add_payment(fc.forecast_detail,fpmt)
+                    
         else:
-            return
+            x=1 #print('compute forecast - Teacher version ',payment_type)
+        return
+    
+   
         
 class Para(Role):
     
@@ -546,7 +605,7 @@ class Para(Role):
                     '2017-2018':{7:19.14, 6:18.06, 5:17.17, 4:16.69, 3:16.19, 2:15.84, 1:15.35},
                     '2018-2019':{7:19.52, 6:18.42, 5:17.51, 4:17.02, 3:16.51, 2:16.16, 1:15.66},
                     '2019-2020':{7:19.91, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
-                    '2020-2021':{7:19.91, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97}
+                    '2020-2021':{7:20.31, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97}
                 },
                 'Office':{
                     '2013-2014':{7:21.51, 6:20.15, 5:19.19, 4:18.25, 3:17.27, 2:16.59, 1:16.11},
@@ -556,7 +615,7 @@ class Para(Role):
                     '2017-2018':{7:22.83, 6:20.96, 5:19.97, 4:18.99, 3:17.97, 2:17.26, 1:16.76},
                     '2018-2019':{7:23.29, 6:21.38, 5:20.37, 4:19.37, 3:18.33, 2:17.61, 1:17.10},
                     '2019-2020':{7:23.76, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
-                    '2020-2021':{7:23.76, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44}
+                    '2020-2021':{7:24.23, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44}
                 },
                 'Central':{
                     '2013-2014':{7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64},
@@ -566,14 +625,42 @@ class Para(Role):
                     '2017-2018':{7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43},
                     '2018-2019':{7:27.13, 6:25.12, 5:24.09, 4:23.10, 3:22.07, 2:21.35, 1:20.84},
                     '2019-2020':{7:27.67, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26},
-                    '2020-2021':{7:27.67, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26}
+                    '2020-2021':{7:28.23, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26}
+                },
+                'Support_sp':{
+                    '2013-2014':{7:22.6068, 6:21.5960, 5:21.1725, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2014-2015':{7:22.6068, 6:21.5960, 5:21.1725, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2015-2016':{7:23.0589, 6:21.5960, 5:21.1725, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2016-2017':{7:23.5201, 6:22.0278, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2017-2018':{7:23.5201, 6:22.0278, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2018-2019':{7:23.9905, 6:22.4685, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2019-2020':{7:24.4702, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2020-2021':{7:24.9596, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0}
+                },
+                'Network_sp':{
+                    '2013-2014':{7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64},
+                    '2014-2015':{7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64},
+                    '2015-2016':{7:26.08, 6:24.15, 5:23.16, 4:22.21, 3:21.22, 2:20.52, 1:20.03},
+                    '2016-2017':{7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43},
+                    '2017-2018':{7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43},
+                    '2018-2019':{7:30.5571, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2019-2020':{7:31.1681, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2020-2021':{7:31.7915, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0}
+                },
+                'IT_helpdesk':{
+                    '2013-2014':{7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64},
+                    '2014-2015':{7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64},
+                    '2015-2016':{7:26.08, 6:24.15, 5:23.16, 4:22.21, 3:21.22, 2:20.52, 1:20.03},
+                    '2016-2017':{7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43},
+                    '2017-2018':{7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43},
+                    '2018-2019':{7:1.0, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2019-2020':{7:1.0, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2020-2021':{7:25.0000, 6:16.0000, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0}
                 }
         }
         
-        self.jobs = {0:'Para',1:'Office',2:'Central'}
-        self.job_code = {'Para':0,'Office':1,'Central':2}
-        #with open('../../finance_subcommittee/para_rate_lookup_1_18_2021.pkl', 'rb') as handle:
-        #    self.para_rate_lookup =  pickle.load(handle)
+        self.jobs = {0:'Para',1:'Office',2:'Central',3:'Support_sp',4:'Network_sp',5:'IT_helpdesk'}
+        self.job_code = {'Para':0,'Office':1,'Central':2,'Support_sp':3,'Network_sp':4,'IT_helpdesk':5}
             
         return
     
@@ -634,7 +721,7 @@ class Para(Role):
             for i in ppo.priors[job_code].keys():
                 ppo.priors[job_code][i] = 0.5*ppo.priors[job][i]
         except KeyError:
-            print('Para - update_priors KeyError ',job,job_code,n,ppo.priors)
+            #print('Para - update_priors KeyError ',job,job_code,n,ppo.priors)
             return
         try:
             ppo.priors[job_code][n] += 0.5
@@ -663,62 +750,91 @@ class Para(Role):
         
         rate_error_tolerance  = 0.02
         
+        lineitem.set_payment_type('Other or unknown')
+        
         if rate > 0.0:
-                     
-            if ('PARA' in role_name):
-                jobs = ('Para',)
-            elif ('SECRET' in role_name):
-                jobs = ('Office','Central')
             
-            min_job  = None
-            min_diff = 1000.
-            min_step = None
-                     
-            for job in jobs:
-                for step in self.cba[job][school_year].keys():
-                    diff = abs(self.cba[job][school_year][step] - rate)
-                    if (diff < min_diff):
-                        min_diff = diff
-                        min_job  = job
-                        min_step = step
-                     
-            if (min_diff < rate_error_tolerance):
-                stepcode = school_year + '-' + str(min_step)         
-                hours = None
-                if (abs(rate)>0.0):            
-                    hours = earnings/rate
-                lineitem.set_payment_type("Contract salary")
-                self.update_priors(job,step,ppo)
-                lineitem.update_stepinfo('step',stepcode)        #code is:  yyyy-yyyy-step
-                lineitem.update_stepinfo('hours',hours)    
-                lineitem.update_stepinfo('mindiff',min_diff)
-                lineitem.update_stepinfo('MUNIS_rate',rate)
-                lineitem.update_stepinfo('table_job',min_job)
-                lineitem.update_stepinfo('from_prior',False)
-            
+            if (obj == '51338'):
+                lineitem.set_payment_type('Summer Pay')
+                    
+            elif (obj == '51401'):
+                lineitem.set_payment_type('Stipend - other')
+
             else:
-                max_job = None
-                max_step = None
-                priors = ppo.get_priors()
-            
-                for job in priors.keys():
-                    for i in priors[job].keys():
-                        prob = priors[job][i]
-                        if (prob > 0.9):
-                            max_job = job
-                            max_step = i
-                if (max_job is not None):
-                    step = i+1
-                    jobname = self.jobs[max_job]
-                    rate = self.cba[jobname][school_year][i+1]
+                min_job  = None
+                min_diff = 1000.
+                min_step = None
+                     
+                for job in self.cba.keys():
+                    try:
+                        for step in self.cba[job][school_year].keys():
+                            for fact in [1.0,1.5]:
+                                diff = abs(self.cba[job][school_year][step]*fact - rate)
+                                if (diff < min_diff):
+                                    min_diff = diff
+                                    min_job  = job
+                                    min_step = step
+                                    min_fact = fact
+                    except KeyError:
+                        print('KeyError: ',name,role_name,job,school_year)
+                     
+                if (min_diff < rate_error_tolerance):
+                    stepcode = school_year + '-' + str(min_step)         
                     hours = None
-                    if (rate > 0.0):
-                        hours = earnings/rate
-                    lineitem.update_stepinfo('step',school_year + '-' + str(step))   #code is:  yyyy-yyyy-step
+                    if (abs(rate)>0.0):            
+                        hours = round(earnings/rate,2)
+                    if (min_fact < 1.25):
+                        lineitem.set_payment_type("Contract salary")
+                    else:
+                        lineitem.set_payment_type("Overtime")
+                    self.update_priors(job,step,ppo)
+                    lineitem.update_stepinfo('step',stepcode)        #code is:  yyyy-yyyy-step
                     lineitem.update_stepinfo('hours',hours)    
+                    lineitem.update_stepinfo('mindiff',min_diff)
                     lineitem.update_stepinfo('MUNIS_rate',rate)
-                    lineitem.update_stepinfo('table_job',jobname)
-                    lineitem.update_stepinfo('from_prior',True)
+                    lineitem.update_stepinfo('table_job',min_job)
+                    lineitem.update_stepinfo('from_prior',False)
+            
+                else:
+                    max_job = None
+                    max_step = None
+                    priors = ppo.get_priors()
+            
+                    for job in priors.keys():
+                        for i in priors[job].keys():
+                            prob = priors[job][i]
+                            if (prob > 0.9):
+                                max_job = job
+                                max_step = i
+                    if (max_job is not None):
+                        step = i+1
+                        jobname = self.jobs[max_job]
+                        rate = self.cba[jobname][school_year][i+1]
+                        hours = None
+                        if (rate > 0.0):
+                            hours = earnings/rate
+                        lineitem.update_stepinfo('step',school_year + '-' + str(step))   #code is:  yyyy-yyyy-step
+                        lineitem.update_stepinfo('hours',hours)    
+                        lineitem.update_stepinfo('MUNIS_rate',rate)
+                        lineitem.update_stepinfo('table_job',jobname)
+                        lineitem.update_stepinfo('from_prior',True)
+        
+        elif (obj == '52121'):
+            lineitem.set_payment_type('Health and Medical')
+        elif (obj == '51338'):
+            lineitem.set_payment_type('Summer Pay')
+        elif (obj == '51404'):
+            lineitem.set_payment_type('Stipend - Coaches/Advisors')
+        elif (obj == '51406'):
+            lineitem.set_payment_type('Stipend - Athletic Officials')
+        else:
+            lineitem.set_payment_type('Other or unknown')
+        return
+    
+    def compute_forecast(self,fc,pmt):                       
+        """compute_forecast - Paras version"""
+        payment_type = pmt.get_payment_type()
+        print('compute forecast - Paras version ',payment_type)
         return
         
 class Office(Para):
@@ -727,25 +843,23 @@ class Office(Para):
         Para.__init__(self, person, role_name)
         return
     
-    def set_empirical_priors(self,prior):
+    def xset_empirical_priors(self,prior):
         try:
             self.empirical_priors = cp.deepcopy(prior)
         except KeyError:
             print('Office - set empirical priors KeyError ',prior)
         return
     
-    def xupdate_priors(self,job,n,ppo):
-        """update_priors(param,value) updates the priors for param given value"""
-        try:
-            for i in ppo.priors[job].keys():
-                ppo.priors[job][i] = 0.5*ppo.priors[job][i]
-        except KeyError:
-            print('Office - update_priors KeyError ',job,n,ppo.priors)
-            return
-        try:
-            ppo.priors[job][n] += 0.5
-        except KeyError:
-            print('Office update_priors KeyError ',job,n,ppo.priors)
+class Support_specialist(Para):
+    
+    def __init__(self, person, role_name):
+        Para.__init__(self, person, role_name)
+        return
+    
+class IT_helpdesk(Para):
+    
+    def __init__(self, person, role_name):
+        Para.__init__(self, person, role_name)
         return
             
 class Facilities(Role):
@@ -802,7 +916,8 @@ class Facilities(Role):
                 '2018': {'2018-1': 29.5500},
                 '2019': {'2019-1': 29.5500},
                 '2020': {'2020-1': 30.6000},
-                '2021': {'2021-1': 30.6000}
+                '2021': {'2021-1': 31.2120},
+                '2022': {'2022-1': 31.2120}
                 },
             'Facility Dir': {
                 '2014': {'2014-1': 33.3189},
@@ -812,7 +927,8 @@ class Facilities(Role):
                 '2018': {'2018-1': 35.8869},
                 '2019': {'2019-1': 36.6046},
                 '2020': {'2020-1': 36.6046},
-                '2021': {'2021-1': 37.3368}
+                '2021': {'2021-1': 37.3368},
+                '2022': {'2022-1': 38.0835}
                 },
             'Custodian PT':  {
                 '2014': {'2014-1': 10.0000},
@@ -828,75 +944,30 @@ class Facilities(Role):
         
         self.roles = {'CUSTODIAN': 'Custodian', 'CUST PT': 'Custodian PT', 
                       "CUST>'09": 'Custodian',"MAINT>'07": 'Maintenance', "CUST<'09": 'Custodian',
-                      'DIR MAINT': 'Maint Dir', 'ELECTRICAN': 'Electrician', 
+                      'DIR MAINT': 'Maint Dir', 'ELECTRICAN': 'Electrician', 'C/S COLE': 'Custodian PT', 
                       'MAINTENANC': 'Maintenance', 'FACILTY DR': 'Facility Dir'}
         
         self.prior_jobs = {0:'Custodian',1:'Maintenance',2:'Electrician',
                            3:'Maint Dir',4:'Facility Dir',5:'Custodian PT'}
         
-        self.role_codes = {'CUSTODIAN':0, 'MAINTENANC':1, 'ELECTRICAN':2, 'DIR MAINT':3, 
+        self.role_codes = {'CUSTODIAN':0, 'MAINTENANC':1, 'ELECTRICAN':2, 'DIR MAINT':3, 'C/S COLE':5, 
                          'FACILTY DR':4, 'CUST PT':5, "CUST>'09":0, "CUST<'09": 0, "MAINT>'07":1}
         
         self.jobs_prior = {'Custodian':0, 'Maintenance':1, 'Electrician':2,
                            'Maint Dir':3, 'Facility Dir':4, 'Custodian PT':5}
+        
+        self.stipend_types = {0:"Facilities stipend",1:"Head custodian stipend",2:"Head custodian stipend",\
+                              3:"Head custodian stipend",4:"Maintenance Foreman stipend"}
            
         self.stipend = {
-            '2014': {
-                        #"Facilities stipend":                          650.00,   no general stipend this year
-                        "Head custodian stipend - Elementary":        1154.84,
-                        "Head custodian stipend - Middle School":     1231.83,
-                        "Head custodian stipend - High School":       2001.73,
-                        "Maintenance Foreman stipend":                2466.56,
-                        },
-            '2015': {
-                        #"Facilities stipend":                         650.00,
-                        "Head custodian stipend - Elementary":        1177.94,
-                        "Head custodian stipend - Middle School":     1256.47,
-                        "Head custodian stipend - High School":       2041.76,
-                        "Maintenance Foreman stipend":                2515.89
-                        },
-            '2016': {
-                        #"Facilities stipend":                          650.00,
-                        "Head custodian stipend - Elementary":        1300.00,
-                        "Head custodian stipend - Middle School":     1500.00,
-                        "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00,
-                        },
-            '2017': {
-                        #"Facilities stipend":                          650.00,
-                        "Head custodian stipend - Elementary":        1300.00,
-                        "Head custodian stipend - Middle School":     1500.00,
-                        "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00,
-                        },
-            '2018': {
-                        "Facilities stipend":                          650.00,   #just in case
-                        "Head custodian stipend - Elementary":        1300.00,
-                        "Head custodian stipend - Middle School":     1500.00,
-                        "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00,
-                        },
-            '2019': {
-                        "Facilities stipend":                          650.00,
-                        "Head custodian stipend - Elementary":        1300.00,
-                        "Head custodian stipend - Middle School":     1500.00,
-                        "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00,
-                        },
-            '2020': {
-                        "Facilities stipend":                          650.00,
-                        "Head custodian stipend - Elementary":        1300.00,
-                        "Head custodian stipend - Middle School":     1500.00,
-                        "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00,
-                        },
-            '2021': {
-                        "Facilities stipend":                          650.00,
-                        "Head custodian stipend - Elementary":        1300.00,
-                        "Head custodian stipend - Middle School":     1500.00,
-                        "Head custodian stipend - High School":       2200.00,
-                        "Maintenance Foreman stipend":                2700.00,
-                        }
+            '2014': {0: 0.00,  1: 1154.84,  2: 1231.83,  3: 2001.73,  4: 2466.56},
+            '2015': {0: 0.00,  1: 1177.94,  2: 1256.47,  3: 2041.76,  4: 2515.89},
+            '2016': {0: 0.00,  1: 1300.00,  2: 1500.00,  3: 2200.00,  4: 2700.00},
+            '2017': {0: 0.00,  1: 1300.00,  2: 1500.00,  3: 2200.00,  4: 2700.00},
+            '2018': {0: 650.00,  1: 1300.00, 2: 1500.00, 3: 2200.00,  4: 2700.00},
+            '2019': {0: 650.00,  1: 1300.00, 2: 1500.00, 3: 2200.00,  4: 2700.00},
+            '2020': {0: 650.00, 1: 1300.00, 2: 1500.00, 3: 2200.00, 4: 2700.00},
+            '2021': {0: 650.00, 1: 1300.00, 2: 1500.00, 3: 2200.00, 4: 2700.00}
                 }
         return
         
@@ -905,6 +976,12 @@ class Facilities(Role):
     
     def get_cba_steps(self):
         return(self.cba_steps)
+    
+    def get_cba_rate(self,job,year,step):
+        try:
+            return(self.cba[job][year][step])
+        except KeyError:
+            return(None)
     
     def get_stipend(self):
         return(self.stipend)
@@ -944,12 +1021,13 @@ class Facilities(Role):
         person           = self.get_parent_person()  #parent person object
         name             = person.get_name()                #name of person
         payment_type     = 'Other or unknown'
+        role_class = str(parent_role.__class__)[20:len(str(parent_role.__class__))-2]
         
         error_tolerance  = 3
         rate_tolerance   = 0.03
         
         mindiff = 1000.0                                   #look up salary in cba table
-        min_syr = None
+        min_fyr = None
         min_job = None
         min_OT  = None
         
@@ -959,19 +1037,28 @@ class Facilities(Role):
             hours = None
             
         jobname = self.roles[role_name]
-        cbat = self.cba[jobname]                                   
+        cbat = self.cba[jobname]
+
+        for step in cbat[fiscal_year].keys():
+            for fact in [1.0,1.5]:
+                diff = abs(rate - fact*cbat[fiscal_year][step])
+                if (diff < mindiff):
+                    mindiff = diff
+                    min_fyr = fiscal_year
+                    min_job = jobname
+                    min_step = step
+                    min_fact = fact       
+        
         for fyr in cbat.keys():
-            for step in cbat[fyr].keys():
-                for fact in [1.0,1.5]:
-                    diff = abs(rate - fact*cbat[fyr][step])
-                    if (diff < mindiff):
-                        mindiff = diff
-                        min_fyr = fyr
-                        min_job = jobname
-                        min_step = step
-                        min_fact = fact
-                        
-             
+                for step in cbat[fyr].keys():
+                    for fact in [1.0,1.5]:
+                        diff = abs(rate - fact*cbat[fyr][step])
+                        if (diff < mindiff):
+                            mindiff = diff
+                            min_fyr = fyr
+                            min_job = jobname
+                            min_step = step
+                            min_fact = fact         
                 
         if (mindiff < rate_tolerance):
             lineitem.update_stepinfo('MUNIS_rate',cbat[min_fyr][min_step]) 
@@ -1005,36 +1092,35 @@ class Facilities(Role):
             
             for fyear in self.stipend.keys():                      #search through stipend table by year
                 cbas = self.stipend[fyear]                         #stipend for this fiscal year
-                for ptype in cbas.keys():                          #search through person types in table
+                for ix in cbas.keys():                             #search through person types in table
                     for fact in [1.0,1.5]:                         #try straight time and time-and-a-half rates
-                        sp = fact*cbas[ptype]                      #factor times stipend 
+                        sp = fact*cbas[ix]                         #factor times stipend 
                         if (rate > 0.0):                           #if rate is not zero, use it to check
                             diff = abs(80.0*26.0*rate - sp)        #stipend - 80*26*hourly_rate
                             if (diff < mindiff):                   #is this the best fit so far?
                                 mindiff = diff                     #if so, save the difference, ptype, and fact
-                                min_ptype = ptype
+                                min_ix = ix
                                 min_fact = fact
                             diff = abs(26.0*rate - sp)             #another possibility to check - is it payperiod rate?
                             if (diff < mindiff):                   #is this the best fit yet?
                                 mindiff = diff                     #if so save diff, ptype, fact
-                                min_ptype = ptype
+                                min_ix = ix
                                 min_fact = fact
                         else:                                      #if rate=0.0, try using earnings
                             diff = abs(earnings*26.0*80.0 - sp)   #I think this should be earnings*26.0!!!!
                             #diff = abs(earnings*26.0 - sp)         #changed 3/3/2021
                             if (diff < mindiff):                   #is this the best so far?
                                 mindiff = diff                     #if so save diff, ptype, fact
-                                min_ptype = ptype
+                                min_ix = ix
                                 min_fact = fact
                             diff = abs(earnings - sp)              #another possibility - earnings is whole stipend
                             if (diff < mindiff):                   #is this the best fit so far?
                                 mindiff = diff                     #if so save diff, ptype, fact
-                                min_ptype = ptype
+                                min_ix = ix
                                 min_fact = fact
                                 
             if (mindiff < error_tolerance):                       #did we find an acceptably close fit?
-                if (min_fact == 1.5):
-                    min_ptype = min_ptype + ' - OT'
+                min_ptype = self.stipend_types[min_ix]
                 lineitem.set_payment_type(min_ptype)
                 return
             
@@ -1076,6 +1162,11 @@ class Facilities(Role):
         """Null Prior initialization for facilities"""
         return
     
+    def compute_forecast(self,fc,pmt):                       
+        """compute_forecast - Facilities version"""
+        payment_type = pmt.get_payment_type()
+        print('compute forecast - Facilities version ',payment_type)
+        return
 class Custodian(Facilities):
     
     def __init__(self, person, role_name):
@@ -1133,12 +1224,12 @@ class Substitutes(Role):
             
         if (obj in ['51110','51115','21010']):    
             if (isinstance(parent_role,Substitute_teacher)):
-                if (str(rate) in ['75.0','125.0']):
+                if (str(rate) in ['75.0','85.0','100.0','125.0']):
                     days = earnings/rate
                     lineitem.update_stepinfo('cba_rate',rate) 
                     lineitem.update_stepinfo('days',days)
                     lineitem.set_payment_type("Contract salary")
-                    if (str(rate) == '75.0'):
+                    if (str(rate) in ['75.0','85.0','100.0']):
                         lineitem.update_stepinfo('role',"Substitute teacher")
                     elif (str(rate) == '125.0'):
                         lineitem.update_stepinfo('role',"Substitute nurse")
@@ -1161,8 +1252,20 @@ class Substitutes(Role):
         elif (obj == '52121'):                       #health and medical
             lineitem.set_payment_type("Health and Medical")
         return
+    
+    def compute_forecast(self,fc,pmt):                       
+        """compute_forecast - Substitutes version"""
+        payment_type = pmt.get_payment_type()
+        print('compute forecast - Substitutes version ',payment_type)
+        return
         
 class Substitute_teacher(Substitutes):
+    
+    def __init__(self, person, role_name):
+        Substitutes.__init__(self, person, role_name) 
+        return
+
+class Substitute_nurse(Substitutes):
     
     def __init__(self, person, role_name):
         Substitutes.__init__(self, person, role_name) 
@@ -1243,7 +1346,7 @@ class Appendix_B(Role):
         person           = self.get_parent_person()  #parent person object
         name             = person.get_name()                #name of person
         
-        lineitem.set_payment_type("Other or unknown")
+        lineitem.set_payment_type("Coach/Advisor stipend")
         
         if syear in self.stipend_lookup.keys():
             searnings = str(earnings)
@@ -1252,7 +1355,7 @@ class Appendix_B(Role):
                 lineitem.update_stepinfo('step',self.stipend_lookup[syear][searnings]['step'])
                 lineitem.update_stepinfo('pts',self.stipend_lookup[syear][searnings]['pts'])
                 lineitem.update_stepinfo('frac',self.stipend_lookup[syear][searnings]['frac'])
-                lineitem.set_payment_type("Coach/Advisor stipend")
+
         return
     
     def get_schedule_B(self):
@@ -1282,3 +1385,67 @@ class Advisor(Appendix_B):
     def __init__(self, person, role_name):
         Appendix_B.__init__(self, person, role_name)
         return
+    
+class Tutor(Appendix_B):
+    
+    def __init__(self, person, role_name):
+        Appendix_B.__init__(self, person, role_name)
+        return
+    
+    def compute_forecast(self,fc,pmt):                       
+        """compute_forecast - Appendix B version"""
+        payment_type = pmt.get_payment_type()
+        print('compute forecast - Appendix B version ',payment_type)
+        return
+    
+class Administrator(Role):
+    
+    def __init__(self, person, role_name):
+        Role.__init__(self, person, role_name)
+        return
+    
+    def decode_earnings(self,lineitem):
+       
+        obj              = lineitem.get_obj()
+        rate             = lineitem.get_rate()
+        acct             = lineitem.get_acct()
+        in_earnings      = lineitem.get_earnings()
+        earnings         = abs(in_earnings)                 #reverse sign if earnings are negative
+        
+        chk              = lineitem.get_parent_check()      #parent check object
+        ppo              = chk.get_parent_payperiod()       #parent payperiod object
+        school_year      = ppo.get_school_year()            #school year for current lineitem
+        syseq            = ppo.get_school_year_seq()        #school year sequence number
+        parent_role      = ppo.get_parent_role()            #get parent role
+
+        person           = self.get_parent_person()  #parent person object
+        name             = person.get_name()                #name of person
+        
+        lineitem.set_payment_type("Other or unknown")
+            
+        if (obj == '51110'):    
+            lineitem.set_payment_type("Contract salary")
+        elif (obj == '52121'):                       #health and medical
+            lineitem.set_payment_type("Health and Medical")
+        return
+    
+    def compute_forecast(self,fc,pmt):                       
+        """compute_forecast - Administrator version"""
+        payment_type = pmt.get_payment_type()
+        print('compute forecast - Administrator version ',payment_type)
+        return
+    
+class Principals(Administrator):
+    
+    def __init__(self, person, role_name):
+        Administrator.__init__(self, person, role_name)
+        
+class Admin_staff(Administrator):
+    
+    def __init__(self, person, role_name):
+        Administrator.__init__(self, person, role_name)
+        
+class School_committee(Administrator):
+    
+    def __init__(self, person, role_name):
+        Administrator.__init__(self, person, role_name)
