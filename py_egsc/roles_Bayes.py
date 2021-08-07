@@ -115,7 +115,12 @@ class Role():                                                  #generic employee
     
     def compute_forecast(self,fc,pmt):                         #compute forecast generic
         """Generic compute_forecast routine - does nothing"""
-        print('compute forecast - Role version')
+        print('compute forecast - Role version',pmt.get_payment_type(),pmt.get_name(),\
+              pmt.get_school_year(),pmt.get_school_year_seq())
+        return
+    
+    def complete_forecast(self,fc,pmt):                         #compute forecast generic
+        """Generic complete_forecast routine - does nothing"""
         return
     
     
@@ -256,22 +261,6 @@ class Teacher(Role):
             row = 10
         newcode += str(row)
         return(newcode)
-    
-    def xget_salary_for_year(self,stepcode,syear,factor):       #step code format is 'yyyy-yyyy-col-step'
-        """ returns salary for future year, possibly with step changes and salary increases"""
-        salary = self.get_step_salary(stepcode)
-        school_year = int(syear[0:4])
-        words = stepcode.split('-')
-        sal_year = int(words[0])                                  
-        sal_col  = words[2]
-        sal_step = int(words[3])
-        new_step = min(sal_step + school_year - sal_year,10)
-        new_base_stepcode = words[0] + '-' + words[1] + '-' + words[2] + '-' + str(new_step)
-        new_step_salary = self.get_step_salary(new_base_stepcode) 
-        new_sal = round(factor*new_step_salary,2)
-        new_step = min(sal_step + school_year - sal_year,10)
-        new_stepcode = str(school_year) + '-' + str(school_year+1) + '-' + sal_col + '-' + str(new_step)
-        return((new_stepcode,new_sal))
     
     def get_salary_for_year(self,stepcode,syear):       #step code format is 'yyyy-yyyy-col-step'
         """ returns salary for future year, possibly with step changes"""
@@ -547,39 +536,40 @@ class Teacher(Role):
         
     def compute_forecast(self,fc,pmt):                       
         """compute_forecast - Teacher version"""
-        payment_type = pmt.get_payment_type()
-        if (payment_type == 'Contract salary'):
-            base_year = fc.get_base_school_year()
-            syseq = pmt.get_school_year_seq()
-            pmt_earnings = pmt.get_earnings()
-            stepinfo = pmt.get_stepinfo()
-            factors  = fc.get_factors()['Teacher']
-            self.reset_cba_matrix()
-            for sy in factors.keys():
+        payment_type = pmt.get_payment_type()                               #get payment type
+        if (payment_type == 'Contract salary'):                             #Contract salary processing
+            factors  = fc.get_factors()['Teacher']                          #get compounded salary increase factors
+            self.reset_cba_matrix()                                         #compute modified cba salary table
+            for sy in factors.keys():                                       #do this for each forecast year
                 self.modify_cba_matrix(sy,factors[sy])
-            forecast_years    = fc.get_forecast_years()
-            for year in forecast_years:
-                new_stepinfo = {}
+            forecast_years    = fc.get_forecast_years()                     #get list of years to forecast
+            stepinfo = pmt.get_stepinfo()                                   #get stepinfo for base period
+            for year in forecast_years:                                     #compute steps and salaries in forecast years
+                new_stepinfo = {}                                           #copy stepinfo from base
                 for key in stepinfo.keys():
                     new_stepinfo[key] = stepinfo[key]
-                earnings = pmt_earnings                  #default if not step info
-                if 'step' in stepinfo.keys():
-                    stepcode = stepinfo['step']
-                    new_salary = self.get_salary_for_year(stepcode,year)
+                earnings = pmt.get_earnings()                               #if no step info just carry earnings forward
+                if 'step' in stepinfo.keys():                               #if base step is known
+                    stepcode = stepinfo['step']                             #compute stepcodes for forecast years
+                    new_salary = self.get_salary_for_year(stepcode,year)    #update step and salary for forecast year
                     new_stepinfo['step'] = new_salary[0]
                     new_stepinfo['salary'] = round(new_salary[1],2)
-                    if (('payments' in stepinfo.keys()) & ('fte' in stepinfo.keys())):
+                    if (('payments' in stepinfo.keys()) & ('fte' in stepinfo.keys())):  #compute earnings if possible
                         n_payments = stepinfo['payments']
                         fte = stepinfo['fte']
-                        if (syseq <= n_payments):
-                            earnings = round(fte*new_salary[1]/n_payments,2)
+                        if (pmt.get_school_year_seq() <= n_payments):
+                            earnings = round(fte*new_salary[1]/n_payments,2)     #earnings = fte*salary/payments
                         else:
-                            earnings = 0.0
-                    fpmt = Forecast_payment(fc,pmt,year,syseq,earnings,new_stepinfo)
-                    fc.add_payment(fc.forecast_detail,fpmt)
+                            earnings = 0.0                                           #zero in some cases if 21 payments
+                syseq = pmt.get_school_year_seq()                               #payperiod sequence number for this payment
+                fpmt = Forecast_payment(fc,pmt,year,syseq,earnings,new_stepinfo) #create Forecast_payment object
+                fc.add_payment(fc.forecast_detail,fpmt)                          #add it to the forecast_detail 
+                
                     
         else:
-            x=1 #print('compute forecast - Teacher version ',payment_type)
+            x=1 
+        print('compute_forecast - Teacher version ',pmt.get_payment_type(),pmt.get_name(),\
+              pmt.get_school_year(),pmt.get_school_year_seq())
         return
     
    
@@ -833,8 +823,8 @@ class Para(Role):
     
     def compute_forecast(self,fc,pmt):                       
         """compute_forecast - Paras version"""
-        payment_type = pmt.get_payment_type()
-        print('compute forecast - Paras version ',payment_type)
+        print('compute forecast - Paras version ',pmt.get_payment_type(),pmt.get_name(),\
+              pmt.get_school_year(),pmt.get_school_year_seq())
         return
         
 class Office(Para):
@@ -1164,8 +1154,8 @@ class Facilities(Role):
     
     def compute_forecast(self,fc,pmt):                       
         """compute_forecast - Facilities version"""
-        payment_type = pmt.get_payment_type()
-        print('compute forecast - Facilities version ',payment_type)
+        print('compute forecast - Facilities version ',pmt.get_payment_type(),pmt.get_name(),\
+              pmt.get_school_year(),pmt.get_school_year_seq())
         return
 class Custodian(Facilities):
     
@@ -1255,8 +1245,8 @@ class Substitutes(Role):
     
     def compute_forecast(self,fc,pmt):                       
         """compute_forecast - Substitutes version"""
-        payment_type = pmt.get_payment_type()
-        print('compute forecast - Substitutes version ',payment_type)
+        print('compute forecast - Substitutes version ',pmt.get_payment_type(),pmt.get_name(),\
+              pmt.get_school_year(),pmt.get_school_year_seq())
         return
         
 class Substitute_teacher(Substitutes):
@@ -1366,6 +1356,12 @@ class Appendix_B(Role):
     
     def get_point_values(self):
         return(self.point_values)
+    
+    def compute_forecast(self,fc,pmt):                       
+        """compute_forecast - Appendix B version"""
+        print('compute forecast - Appendix B version ',pmt.get_payment_type(),pmt.get_name(),\
+              pmt.get_school_year(),pmt.get_school_year_seq())
+        return
         
 class Coach(Appendix_B):
     
@@ -1390,12 +1386,6 @@ class Tutor(Appendix_B):
     
     def __init__(self, person, role_name):
         Appendix_B.__init__(self, person, role_name)
-        return
-    
-    def compute_forecast(self,fc,pmt):                       
-        """compute_forecast - Appendix B version"""
-        payment_type = pmt.get_payment_type()
-        print('compute forecast - Appendix B version ',payment_type)
         return
     
 class Administrator(Role):
@@ -1431,8 +1421,8 @@ class Administrator(Role):
     
     def compute_forecast(self,fc,pmt):                       
         """compute_forecast - Administrator version"""
-        payment_type = pmt.get_payment_type()
-        print('compute forecast - Administrator version ',payment_type)
+        print('compute forecast - Administrator version ',pmt.get_payment_type(),pmt.get_name(),\
+              pmt.get_school_year(),pmt.get_school_year_seq())
         return
     
 class Principals(Administrator):

@@ -7,8 +7,9 @@ from roles_Bayes import *
 
 class Forecast():         #class for forecast
     """Provides a forecast object"""
-    def __init__(self,base_school_year,school_year,n_years,desc1,desc2,changes={}):      #constructor
-        self.base_school_year     = base_school_year  #base year string 'yyyy-yyyy'
+    def __init__(self,school_year,n_years,base,desc1,desc2,changes={}):      #constructor
+        self.base_school_year     = base[0]           #base year string 'yyyy-yyyy'
+        self.base_school_year_seq = base[1]           #payperiod in base year
         self.school_year          = school_year       #first forecast school year string 'yyyy-yyyy'
         self.forecast_years       = n_years           #number of years to forecast
         self.desc1                = desc1             #first description line
@@ -32,6 +33,13 @@ class Forecast():         #class for forecast
     
     def set_base_school_year(self,byear):
         self.base_school_year = byear
+        return
+    
+    def get_base_school_year_seq(self):
+        return(self.base_school_year_seq)
+    
+    def set_base_school_year_seq(self,syseq):
+        self.base_school_year_seq = syseq
         return
     
     def set_school_year(self,syear):
@@ -69,8 +77,8 @@ class Forecast():         #class for forecast
     
     def compute_factors(self,changes):
         factors = {}
-        sy = changes['Start year']
         for key in changes.keys():
+            sy = changes['Start year']
             if ('Start' not in key):
                 factors[key] = {}
                 multiplier = 1.0
@@ -114,17 +122,18 @@ class Forecast():         #class for forecast
                 role = roles[role_name]                                     
                 role_class = role.get_role_class()                               #get role class
                 pp = role.get_payperiods()                                       #get payperiods
-                base_year = self.base_school_year                                #get base school year
-                if base_year in pp.keys():                                       #any data in base year?
-                    for syseq in pp[self.base_school_year].keys():               #if so get payperiods
-                        chks = pp[self.base_school_year][syseq].get_checks()     #get checks for this payperiod
-                        for chk in chks:                                         #loop through checks
-                            lis = chks[chk].get_items()                          #get line items for each check
-                            for i in lis.keys():                                 #loop through line items
-                                itm = lis[i]
-                                payment = Actual_payment(self,itm)               #create actual_payment object
-                                self.add_payment(self.actual_detail,payment)     #add it to the list     
-                                role.compute_forecast(self,payment)              #call compute forecast routine for role  
+                for syear in pp.keys():                                          #loop through school hears
+                    if (syear == self.base_school_year):                         #take years 
+                        for syseq in pp[syear].keys():                           #if so get payperiods
+                            if (syseq <= self.base_school_year_seq):
+                                chks = pp[syear][syseq].get_checks()             #get checks for this payperiod
+                                for chk in chks:                                 #loop through checks
+                                    lis = chks[chk].get_items()                  #get line items for each check
+                                    for i in lis.keys():                         #loop through line items
+                                        itm = lis[i]
+                                        payment = Actual_payment(self,itm)       #create actual_payment object
+                                        self.add_payment(self.actual_detail,payment) #add it to the list     
+                                        role.compute_forecast(self,payment)          #call compute forecast routine for role  
              #at end of role, propagate most recent forecast with fte forward in base year, forward and backward in other years
         return
     
