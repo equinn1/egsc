@@ -134,6 +134,7 @@ class Role():                                                  #generic employee
         fyears = fc.get_forecast_years()
         base_year = fc.get_base_school_year()
         base_seq  = fc.get_base_school_year_seq()
+        new_payments = {}
         if (base_seq < 26):
             hyear = self.get_previous_school_year(base_year)
             for syseq in np.arange(base_seq+1,27):
@@ -153,11 +154,10 @@ class Role():                                                  #generic employee
                                               'Other or unknown','Stipend - other','Summer Pay','Class Overage/Weighting']):
                                         earnings = it.get_earnings()
                                         stepinfo = it.get_stepinfo()
-                                        ap = Actual_payment(fc,it)
+                                        ap = Actual_payment(fc,li[i])
                                         for year in fyears:
                                             fp = Forecast_payment(fc,ap,year,syseq,earnings,stepinfo)
-                                            fc.add_payment(fd,fp) 
-                            
+                                            fc.add_payment(fd,fp)        
                 except KeyError:
                     print('Key Error',name)
         return
@@ -491,7 +491,7 @@ class Teacher(Role):
             lineitem.set_payment_type("Officials/Referees")
 
         
-        elif strate in rate_lookup[school_year].keys():
+        elif strate in rate_lookup[school_year].keys():                 #does rate match a CBA table rate?
             
             lineitem.set_payment_type("Contract salary")
             
@@ -578,7 +578,6 @@ class Teacher(Role):
             if (ftes is not None):
                 lineitem.update_stepinfo('ftes',ftes)
             lineitem.update_stepinfo('from_prior',True)
-            #lineitem.set_payment_type('Other or unknown')
             
         return
     
@@ -614,16 +613,7 @@ class Teacher(Role):
                 fpmt = Forecast_payment(fc,pmt,year,syseq,earnings,new_stepinfo) #create Forecast_payment object
                 fc.add_payment(fc.forecast_detail,fpmt)                          #add it to the forecast_detail 
                 
-        #elif (payment_type in ['Coverage - other','Detention coverage']):   #Coverage processing
-        #    syseq = pmt.get_school_year_seq()                               #payperiod sequence number for this payment
-        #    earnings = pmt.get_earnings()                                   #get earnings
-        #    stepinfo = pmt.get_stepinfo()                                   #get stepinfo for base period
-        #    forecast_years = fc.get_forecast_years()                        #get list of years to forecast
-        #    for year in forecast_years:
-        #        fpmt = Forecast_payment(fc,pmt,year,syseq,earnings,stepinfo) #create Forecast_payment object
-        #        fc.add_payment(fc.forecast_detail,fpmt)                          #add it to the forecast_detail 
         else:
-            print('Teacher version calling parent version')
             super().compute_forecast(fc,pmt)
         print('compute_forecast - Teacher version ',pmt.get_payment_type(),pmt.get_name(),\
               pmt.get_school_year(),pmt.get_school_year_seq())
@@ -633,31 +623,36 @@ class Teacher(Role):
     def complete_forecast(self,fc,role_class,role_name,name,people):
         forecast_years = fc.get_forecast_years()                                 #get years to forecast
         fd = fc.get_forecast_detail()                                            #get forecast detail
-        fdc = cp.deepcopy(fd)
+        pmts = {}
         for syear in forecast_years:                                             #loop through keys in forecast detail
             try:
-                for pt in fdc[syear][role_class][role_name].keys():
+                for pt in fd[syear][role_class][role_name].keys():
                     if (pt == 'Contract salary'):
-                        if name in fdc[syear][role_class][role_name]['Contract salary'].keys():
-                            max_seq = max(fdc[syear][role_class][role_name]['Contract salary'][name].keys())
-                            pa = fdc[syear][role_class][role_name]['Contract salary'][name][max_seq]
+                        if name in fd[syear][role_class][role_name]['Contract salary'].keys():
+                            max_seq = max(fd[syear][role_class][role_name]['Contract salary'][name].keys())
+                            pa = fd[syear][role_class][role_name]['Contract salary'][name][max_seq]
                             for i in np.arange(len(pa)):
                                 pmt = pa[i]
-                                si = pmt.get_stepinfo()
+                                si = pmts[i].get_stepinfo()
                                 if (('step' in si.keys()) & ('fte' in si.keys()) & ('payments' in si.keys()) ):
                                     payments = si['payments']
                                     fte = si['fte']
                                     if (max_seq < payments):
-                                        inc = 1
+                                        n = len(pmts)+1
+                                        incr = 1
                                         for j in np.arange(max_seq,payments):
-                                            fc.add_payment(fd,pmt,incr = inc)
-                                            inc += 1
+                                            pmts[n] = {}
+                                            pmts[n]['pmt'] = pmt
+                                            pmts[n]['incr'] = incr
+                                            n += 1
+                                            incr += 1
                     else:
-                        print('complete forecast Teacher version calling parent version')
                         super().complete_forecast(fc,role_class,role_name,name,people)
                         
             except KeyError:
                 x=1
+        for i in pmts.keys():
+            fc.add_payment(fd,pmts[i]['pmt'],incr = pmts[i]['incr'])
         return
                     
     
