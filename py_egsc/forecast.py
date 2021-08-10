@@ -71,9 +71,13 @@ class Forecast():         #class for forecast
             Fall_year = Spring_year
         return(fc_years)
     
-    def get_next_year(self,school_year):
-        y2 = school_year[5:]
-        return(y2 + '-' + str(int(y2)+1))
+    def get_next_school_year(self,school_year):
+        y = school_year[5:]
+        return(y + '-' + str(int(y)+1))
+    
+    def get_previous_school_year(self,school_year):
+        y = int(school_year[0:4])
+        return(str(y-1) + '-' + str(y))
     
     def compute_factors(self,changes):
         factors = {}
@@ -86,7 +90,7 @@ class Forecast():         #class for forecast
                 for i in np.arange(len(pcts)):
                     multiplier = round(multiplier*(1.0 + pcts[i]/100.0),4)
                     factors[key][sy] = multiplier
-                    sy = self.get_next_year(sy)
+                    sy = self.get_next_school_year(sy)
         return(factors)
     
     def get_factors(self):
@@ -133,14 +137,14 @@ class Forecast():         #class for forecast
                                         itm = lis[i]
                                         payment = Actual_payment(self,itm)       #create actual_payment object
                                         self.add_payment(self.actual_detail,payment) #add it to the list     
-                                        role.compute_forecast(self,payment)          #call compute forecast routine for role  
-             #at end of role, propagate most recent forecast with fte forward in base year, forward and backward in other years
+                                        role.compute_forecast(self,payment)      #call compute forecast routine for role
+                role.complete_forecast(self,role_class,role_name,name,people)    #fill in remaining periods
         return
     
-    def add_payment(self,dd,pmt):    #[school_year][role_class][role_class][payment_type][role_name][name][syseq]
+    def add_payment(self,dd,pmt,incr = 0):  #[school_year][role_class][role_class][payment_type][role_name][name][syseq]
         """Add a pyment to the appropriate dictionary"""
         syear = pmt.get_school_year()                                             #get school year for payment
-        syseq = pmt.get_school_year_seq()                                         #get sy sequence for payment (1-26)
+        syseq = incr + pmt.get_school_year_seq()                                         #get sy sequence for payment (1-26)
         role_name = pmt.get_role_name()                                           #get role name
         role_class = pmt.get_role_class()                                         #get role class
         payment_type = pmt.get_payment_type()                                     #get payment type
@@ -158,7 +162,7 @@ class Forecast():         #class for forecast
         if syseq not in dd[syear][role_class][role_name][payment_type][name].keys():
             dd[syear][role_class][role_name][payment_type][name][syseq] = []      #make sure payperiod has an entry
         dd[syear][role_class][role_name][payment_type][name][syseq].append(pmt)   #append this payment to the list
-        return       
+        return
         
 class Payment():
     """Parent class for payment"""
@@ -233,7 +237,7 @@ class Forecast_payment(Payment):              #class for forecast payment
         self.school_year_seq = syseq                        #school_year_sequence from forecast routine
         self.fiscal_year     = None                         #maybe later
         self.fiscal_year_seq = None                         #maybe later
-        self.payment         = pmt                          #base period payment
+        self.base_payment    = pmt                          #base period payment
         return
     
     def get_person(self):
@@ -257,10 +261,10 @@ class Forecast_payment(Payment):              #class for forecast payment
         self.payment_type = pt
         return
     
-    def get_payment(self):
+    def get_base_payment(self):
         return(self.payment)
     
-    def set_payment(self,pmt):
+    def set_base_payment(self,pmt):
         self.payment = pmt
         return
     

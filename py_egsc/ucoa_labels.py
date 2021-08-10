@@ -20,3 +20,7 @@ class UCOA_labels():
             return(self.labels[col][code])
         except KeyError:
             return('No Label')
+        
+    def set_label(self,col,code,lbl):
+        """Usage: set_label(col,code,lbl) sets the label for field col value code"""
+        self.labels[col][str(code)] = lbl

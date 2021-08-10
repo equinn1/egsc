@@ -113,23 +113,61 @@ class Role():                                                  #generic employee
     def get_first_school_year_seq(self):
         return(self.first_school_year_seq)                     #school year sequence of earliest payperiod object
     
+    def get_previous_school_year(self,syear):                       #previous school year
+        y = int(syear[0:4])
+        return(str(y-1) + '-' + str(y))
+    
     def compute_forecast(self,fc,pmt):                         #compute forecast generic
-        """Generic compute_forecast routine - does nothing"""
-        print('compute forecast - Role version',pmt.get_payment_type(),pmt.get_name(),\
-              pmt.get_school_year(),pmt.get_school_year_seq())
+        """Generic compute_forecast routine - just copies payments"""
+        syseq = pmt.get_school_year_seq()                               #payperiod sequence number for this payment
+        earnings = pmt.get_earnings()                                   #get earnings
+        stepinfo = pmt.get_stepinfo()                                   #get stepinfo for base period
+        forecast_years = fc.get_forecast_years()                        #get list of years to forecast
+        for year in forecast_years:
+            fpmt = Forecast_payment(fc,pmt,year,syseq,earnings,stepinfo) #create Forecast_payment object
+            fc.add_payment(fc.forecast_detail,fpmt)                          #add it to the forecast_detail 
         return
     
-    def complete_forecast(self,fc,pmt):                         #compute forecast generic
-        """Generic complete_forecast routine - does nothing"""
+    def complete_forecast(self,fc,role_class,role_name,name,people):                         #compute forecast generic
+        """Complete forecast - Role version - complete from payroll history"""
+        fd = fc.get_forecast_detail()
+        fyears = fc.get_forecast_years()
+        base_year = fc.get_base_school_year()
+        base_seq  = fc.get_base_school_year_seq()
+        if (base_seq < 26):
+            hyear = self.get_previous_school_year(base_year)
+            for syseq in np.arange(base_seq+1,27):
+                try:
+                    roles = people[name].get_roles()
+                    r = roles[role_name]
+                    pp = r.get_payperiods()
+                    if hyear in pp.keys():
+                        if syseq in pp[hyear].keys():
+                            chks = pp[hyear][syseq].get_checks()
+                            for chk in chks.keys():
+                                li = chks[chk].get_items()
+                                for i in li.keys():
+                                    it = li[i]
+                                    pt = li[i].get_payment_type()
+                                    if (pt in ['Class coverage','Coverage - other','Detention coverage',\
+                                              'Other or unknown','Stipend - other','Summer Pay','Class Overage/Weighting']):
+                                        earnings = it.get_earnings()
+                                        stepinfo = it.get_stepinfo()
+                                        ap = Actual_payment(fc,it)
+                                        for year in fyears:
+                                            fp = Forecast_payment(fc,ap,year,syseq,earnings,stepinfo)
+                                            fc.add_payment(fd,fp) 
+                            
+                except KeyError:
+                    print('Key Error',name)
         return
-    
-    
+
 ################################################################################################
     
 class Teacher(Role):
     
     def __init__(self, person, role_name):
-        Role.__init__(self, person, role_name)
+        super().__init__(person, role_name)
                 
         self.FTE_fractions    = {0:1.0, 1:1/2., 2:1/10., 3:1/5., 4:4/5., 5:3/10., 6:2/5.,\
             7:3/5., 8:1/20., 9:1/3., 10:2/3., 11:1/4., 12:3/4.,13:1/6., 14:5/6., 15:1/7., 16:2/7.,\
@@ -368,76 +406,87 @@ class Teacher(Role):
         
         lineitem.set_payment_type("Other or unknown")
         
-        if ((rate > 29.9999) & (rate < 30.0001)):                       #detention coverage
-            hours = round(earnings/rate,2)
-            lineitem.update_stepinfo('hours',hours)
-            if (obj in ['51110','51339','21010']):
-                lineitem.set_payment_type("Coverage - other")
+        if ((rate > 29.9999) & (rate < 30.0001)):                       #miscellaneous coverage @ $30.00
+            hours = round(earnings/rate,2)                              #compute hours
+            lineitem.update_stepinfo('rate',rate)                       #add rate to stepinfo
+            lineitem.update_stepinfo('hours',hours)                     #add hours to stepinfo
+            if (obj in ['51110','21010']):                              #if obj is 51110 (regular salary) of 21010 ???
+                lineitem.set_payment_type("Coverage - other")           #Class coverage under 51110 instead of 51339
+                
                         
-        if ((rate > 37.9999) & (rate < 38.0001)):                       #detention coverage
-            hours = round(earnings/rate,2)
-            lineitem.update_stepinfo('hours',hours)
-            if ((obj == '51110') | (obj =='51339')):
-                lineitem.set_payment_type("Coverage - other")
+        if ((rate > 37.9999) & (rate < 38.0001)):                       #dept head coverage @ $38.00
+            hours = round(earnings/rate,2)                              #compute hours
+            lineitem.update_stepinfo('hours',hours)                     #add hours to stepinfo
+            lineitem.update_stepinfo('rate',rate)                       #add rate to stepinfo
+            if ((obj == '51110')):                                      #if obj is 51110 regular salary
+                lineitem.set_payment_type("Coverage - other")           #Class coverage under 51110 instead of 51339
+                
         
-        if (obj == '51323'):                       #detention coverage
-
+        if (obj == '51323'):                                            #detention coverage 51323
+            lineitem.update_stepinfo('rate',rate)                       #save rate in stepinfo
             if (rate > 0.0):
                 hours = round(earnings/rate,2)
                 lineitem.update_stepinfo('hours',hours)
             lineitem.set_payment_type("Detention coverage")
         
-        elif (obj == '51327'):                       #other additional compensation
-
-            if (rate > 0.0):
-                hours = round(earnings/rate,2)  
-                lineitem.update_stepinfo('hours',hours)
-                lineitem.set_payment_type("Other additional compensation")
+        elif (obj == '51327'):                                          #other additional compensation 51327
+            lineitem.update_stepinfo('rate',rate)                       #save rate in stepinfo
+            if (rate > 0.0):                                            #compute hours
+                hours = round(earnings/rate,2)                          
+                lineitem.update_stepinfo('hours',hours)                 #add hours to stepinfo
+                lineitem.set_payment_type("Other additional compensation")   
                 
-        elif (obj == '51328'):                       #early retirement incentive
+        elif (obj == '51328'):                                          #early retirement incentive 51328
 
             lineitem.set_payment_type("Early Retirement Incentive")
                             
-        elif (obj == '51336'):                    
-
+        elif (obj == '51336'):                                          #class overage/weighting 51336
+            lineitem.update_stepinfo('rate',rate)                       #save rate in stepinfo
             lineitem.set_payment_type("Class Overage/Weighting")
             
-        elif (obj == '51338'):                      
+        elif (obj == '51338'):                                          #summer pay 51338
+            lineitem.update_stepinfo('rate',rate)                       #save rate in stepinfo
+            if (rate > 0.0):                                            #compute hours
+                hours = round(earnings/rate,2)                          
+                lineitem.update_stepinfo('hours',hours)                 #save hours in stepinfo                 
+            lineitem.set_payment_type("Summer Pay")
+                
+        elif (obj == '51339'):                      
             if (rate > 0.0):
                 hours = round(earnings/rate,2)
                 lineitem.update_stepinfo('hours',hours)
-                lineitem.set_payment_type("Summer Pay")
+            lineitem.set_payment_type("Class coverage")
             
-        elif (obj == '51401'):                       #health and medical
+        elif (obj == '51401'):                                          #Stipend - other 51401
 
             lineitem.set_payment_type("Stipend - other")
             
-        elif (obj == '51404'):                       #health and medical
+        elif (obj == '51404'):                                          #stipend - coaches/advisors 51404
 
             lineitem.set_payment_type("Stipend - Coaches/Advisors")
                         
-        elif (obj == '51406'):                       #health and medical
+        elif (obj == '51406'):                                          #stipend - athletic officials 51406
 
             lineitem.set_payment_type("Stipend - Athletic Officials")
             
-        elif (obj == '51407'):                       #health and medical
+        elif (obj == '51407'):                                          #stipend - mentors 51407
 
             lineitem.set_payment_type("Stipend - mentors")
             
-        elif (obj == '52121'):                       #health and medical
+        elif (obj == '52121'):                                          #health and medical 52121
 
             lineitem.set_payment_type("Health and Medical")
             
-        elif (obj == '53214'):                       #health and medical
-
+        elif (obj == '53214'):                                          #mentoring 53214
+            lineitem.update_stepinfo('rate',rate)                       #save rate in stepinfo
             lineitem.set_payment_type("Mentoring")
                         
-        elif (obj == '53301'):                       #health and medical
+        elif (obj == '53301'):                                          #health and medical 53301
 
             lineitem.set_payment_type("Professional Development and Training")
             
                                     
-        elif (obj == '53416'):                       #health and medical
+        elif (obj == '53416'):                                          #officials and referees 53416
 
             lineitem.set_payment_type("Officials/Referees")
 
@@ -565,12 +614,52 @@ class Teacher(Role):
                 fpmt = Forecast_payment(fc,pmt,year,syseq,earnings,new_stepinfo) #create Forecast_payment object
                 fc.add_payment(fc.forecast_detail,fpmt)                          #add it to the forecast_detail 
                 
-                    
+        #elif (payment_type in ['Coverage - other','Detention coverage']):   #Coverage processing
+        #    syseq = pmt.get_school_year_seq()                               #payperiod sequence number for this payment
+        #    earnings = pmt.get_earnings()                                   #get earnings
+        #    stepinfo = pmt.get_stepinfo()                                   #get stepinfo for base period
+        #    forecast_years = fc.get_forecast_years()                        #get list of years to forecast
+        #    for year in forecast_years:
+        #        fpmt = Forecast_payment(fc,pmt,year,syseq,earnings,stepinfo) #create Forecast_payment object
+        #        fc.add_payment(fc.forecast_detail,fpmt)                          #add it to the forecast_detail 
         else:
-            x=1 
+            print('Teacher version calling parent version')
+            super().compute_forecast(fc,pmt)
         print('compute_forecast - Teacher version ',pmt.get_payment_type(),pmt.get_name(),\
               pmt.get_school_year(),pmt.get_school_year_seq())
+                
         return
+    
+    def complete_forecast(self,fc,role_class,role_name,name,people):
+        forecast_years = fc.get_forecast_years()                                 #get years to forecast
+        fd = fc.get_forecast_detail()                                            #get forecast detail
+        fdc = cp.deepcopy(fd)
+        for syear in forecast_years:                                             #loop through keys in forecast detail
+            try:
+                for pt in fdc[syear][role_class][role_name].keys():
+                    if (pt == 'Contract salary'):
+                        if name in fdc[syear][role_class][role_name]['Contract salary'].keys():
+                            max_seq = max(fdc[syear][role_class][role_name]['Contract salary'][name].keys())
+                            pa = fdc[syear][role_class][role_name]['Contract salary'][name][max_seq]
+                            for i in np.arange(len(pa)):
+                                pmt = pa[i]
+                                si = pmt.get_stepinfo()
+                                if (('step' in si.keys()) & ('fte' in si.keys()) & ('payments' in si.keys()) ):
+                                    payments = si['payments']
+                                    fte = si['fte']
+                                    if (max_seq < payments):
+                                        inc = 1
+                                        for j in np.arange(max_seq,payments):
+                                            fc.add_payment(fd,pmt,incr = inc)
+                                            inc += 1
+                    else:
+                        print('complete forecast Teacher version calling parent version')
+                        super().complete_forecast(fc,role_class,role_name,name,people)
+                        
+            except KeyError:
+                x=1
+        return
+                    
     
    
         
@@ -595,7 +684,13 @@ class Para(Role):
                     '2017-2018':{7:19.14, 6:18.06, 5:17.17, 4:16.69, 3:16.19, 2:15.84, 1:15.35},
                     '2018-2019':{7:19.52, 6:18.42, 5:17.51, 4:17.02, 3:16.51, 2:16.16, 1:15.66},
                     '2019-2020':{7:19.91, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
-                    '2020-2021':{7:20.31, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97}
+                    '2020-2021':{7:20.31, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
+                    '2021-2022':{7:20.31, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
+                    '2022-2023':{7:20.31, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
+                    '2023-2024':{7:20.31, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
+                    '2024-2025':{7:20.31, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
+                    '2025-2026':{7:20.31, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97},
+                    '2026-2027':{7:20.31, 6:18.79, 5:17.86, 4:17.36, 3:16.84, 2:16.48, 1:15.97}
                 },
                 'Office':{
                     '2013-2014':{7:21.51, 6:20.15, 5:19.19, 4:18.25, 3:17.27, 2:16.59, 1:16.11},
@@ -605,7 +700,13 @@ class Para(Role):
                     '2017-2018':{7:22.83, 6:20.96, 5:19.97, 4:18.99, 3:17.97, 2:17.26, 1:16.76},
                     '2018-2019':{7:23.29, 6:21.38, 5:20.37, 4:19.37, 3:18.33, 2:17.61, 1:17.10},
                     '2019-2020':{7:23.76, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
-                    '2020-2021':{7:24.23, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44}
+                    '2020-2021':{7:24.23, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
+                    '2021-2022':{7:24.23, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
+                    '2022-2023':{7:24.23, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
+                    '2023-2024':{7:24.23, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
+                    '2024-2025':{7:24.23, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
+                    '2025-2026':{7:24.23, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44},
+                    '2026-2027':{7:24.23, 6:21.81, 5:20.78, 4:19.76, 3:18.70, 2:17.96, 1:17.44}
                 },
                 'Central':{
                     '2013-2014':{7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64},
@@ -615,7 +716,13 @@ class Para(Role):
                     '2017-2018':{7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43},
                     '2018-2019':{7:27.13, 6:25.12, 5:24.09, 4:23.10, 3:22.07, 2:21.35, 1:20.84},
                     '2019-2020':{7:27.67, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26},
-                    '2020-2021':{7:28.23, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26}
+                    '2020-2021':{7:28.23, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26},
+                    '2021-2022':{7:28.23, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26},
+                    '2022-2023':{7:28.23, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26},
+                    '2023-2024':{7:28.23, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26},
+                    '2024-2025':{7:28.23, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26},
+                    '2025-2026':{7:28.23, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26},
+                    '2026-2027':{7:28.23, 6:25.63, 5:24.57, 4:23.57, 3:22.51, 2:21.78, 1:21.26}
                 },
                 'Support_sp':{
                     '2013-2014':{7:22.6068, 6:21.5960, 5:21.1725, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
@@ -625,7 +732,13 @@ class Para(Role):
                     '2017-2018':{7:23.5201, 6:22.0278, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
                     '2018-2019':{7:23.9905, 6:22.4685, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
                     '2019-2020':{7:24.4702, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
-                    '2020-2021':{7:24.9596, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0}
+                    '2020-2021':{7:24.9596, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2021-2022':{7:24.9596, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2022-2023':{7:24.9596, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2023-2024':{7:24.9596, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2024-2025':{7:24.9596, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2025-2026':{7:24.9596, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2026-2027':{7:24.9596, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0}
                 },
                 'Network_sp':{
                     '2013-2014':{7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64},
@@ -635,7 +748,13 @@ class Para(Role):
                     '2017-2018':{7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43},
                     '2018-2019':{7:30.5571, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
                     '2019-2020':{7:31.1681, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
-                    '2020-2021':{7:31.7915, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0}
+                    '2020-2021':{7:31.7915, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2021-2022':{7:31.7915, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2022-2023':{7:31.7915, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2023-2024':{7:31.7915, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2024-2025':{7:31.7915, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2025-2026':{7:31.7915, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2026-2027':{7:31.7915, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0}
                 },
                 'IT_helpdesk':{
                     '2013-2014':{7:25.57, 6:23.67, 5:22.70, 4:21.77, 3:20.80, 2:20.12, 1:19.64},
@@ -645,7 +764,13 @@ class Para(Role):
                     '2017-2018':{7:26.60, 6:24.63, 5:23.62, 4:22.65, 3:21.64, 2:20.93, 1:20.43},
                     '2018-2019':{7:1.0, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
                     '2019-2020':{7:1.0, 6:1.0, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
-                    '2020-2021':{7:25.0000, 6:16.0000, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0}
+                    '2020-2021':{7:25.0000, 6:16.0000, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2021-2022':{7:25.0000, 6:16.0000, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2022-2023':{7:25.0000, 6:16.0000, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2023-2024':{7:25.0000, 6:16.0000, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2024-2025':{7:25.0000, 6:16.0000, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2025-2026':{7:25.0000, 6:16.0000, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0},
+                    '2026-2027':{7:25.0000, 6:16.0000, 5:1.0, 4:1.0, 3:1.0, 2:1.0, 1:1.0}
                 }
         }
         
@@ -872,7 +997,13 @@ class Facilities(Role):
                 '2018': {'2018-0': 14.0455, '2018-5': 19.3034},
                 '2019': {'2019-0': 14.4300, '2019-5': 19.3034},
                 '2020': {'2020-0': 14.4300, '2020-5': 19.6900},
-                '2021': {'2021-0': 14.8300, '2021-5': 20.0800}
+                '2021': {'2021-0': 14.8300, '2021-5': 20.0800},
+                '2022': {'2022-0': 14.8300, '2022-5': 20.0800},
+                '2023': {'2023-0': 14.8300, '2023-5': 20.0800},
+                '2024': {'2024-0': 14.8300, '2024-5': 20.0800},
+                '2025': {'2025-0': 14.8300, '2025-5': 20.0800},
+                '2026': {'2026-0': 14.8300, '2026-5': 20.0800},
+                '2027': {'2027-0': 14.8300, '2027-5': 20.0800}
                 },
             'Maintenance':{
                 '2014': {'2014-1': 15.00, '2014-2': 15.61, '2014-3':16.24,
@@ -884,7 +1015,13 @@ class Facilities(Role):
                 '2018': {'2018-1': 19.4837},
                 '2019': {'2019-1': 19.8700},
                 '2020': {'2020-1': 19.8700},
-                '2021': {'2021-1': 20.2710}
+                '2021': {'2021-1': 20.2710},
+                '2022': {'2022-1': 20.2710},
+                '2023': {'2023-1': 20.2710},
+                '2024': {'2024-1': 20.2710},
+                '2025': {'2025-1': 20.2710},
+                '2026': {'2026-1': 20.2710},
+                '2027': {'2027-1': 20.2710}
                 },
             'Electrician':{
                 '2014': {'2014-1': 21.09, '2014-2': 22.20, '2014-3': 23.30,
@@ -896,7 +1033,13 @@ class Facilities(Role):
                 '2018': {'2018-1': 27.6232},
                 '2019': {'2019-1': 27.6232},
                 '2020': {'2020-1': 28.1762},
-                '2021': {'2021-1': 28.7397}
+                '2021': {'2021-1': 28.7397},
+                '2022': {'2022-1': 28.7397},
+                '2023': {'2023-1': 28.7397},
+                '2024': {'2024-1': 28.7397},
+                '2025': {'2025-1': 28.7397},
+                '2026': {'2026-1': 28.7397},
+                '2027': {'2027-1': 28.7397}
                 },
             'Maint Dir':  {
                 '2014': {'2014-1': 27.7134},
@@ -907,7 +1050,12 @@ class Facilities(Role):
                 '2019': {'2019-1': 29.5500},
                 '2020': {'2020-1': 30.6000},
                 '2021': {'2021-1': 31.2120},
-                '2022': {'2022-1': 31.2120}
+                '2022': {'2022-1': 31.2120},
+                '2023': {'2023-1': 31.2120},
+                '2024': {'2024-1': 31.2120},
+                '2025': {'2025-1': 31.2120},
+                '2026': {'2026-1': 31.2120},
+                '2027': {'2027-1': 31.2120}
                 },
             'Facility Dir': {
                 '2014': {'2014-1': 33.3189},
@@ -918,7 +1066,12 @@ class Facilities(Role):
                 '2019': {'2019-1': 36.6046},
                 '2020': {'2020-1': 36.6046},
                 '2021': {'2021-1': 37.3368},
-                '2022': {'2022-1': 38.0835}
+                '2022': {'2022-1': 38.0835},
+                '2023': {'2023-1': 38.0835},
+                '2024': {'2024-1': 38.0835},
+                '2025': {'2025-1': 38.0835},
+                '2026': {'2026-1': 38.0835},
+                '2027': {'2027-1': 38.0835}
                 },
             'Custodian PT':  {
                 '2014': {'2014-1': 10.0000},
@@ -928,7 +1081,13 @@ class Facilities(Role):
                 '2018': {'2018-1': 10.0000,'2018-2': 10.1000},
                 '2019': {'2019-1': 14.0500},
                 '2020': {'2020-1': 14.0500},
-                '2021': {'2021-1': 14.0500}
+                '2021': {'2021-1': 14.0500},
+                '2022': {'2021-1': 14.0500},
+                '2023': {'2021-1': 14.0500},
+                '2024': {'2021-1': 14.0500},
+                '2025': {'2021-1': 14.0500},
+                '2026': {'2021-1': 14.0500},
+                '2027': {'2021-1': 14.0500}
                 }
             }
         
